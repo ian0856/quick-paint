@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import PrototypeSwitcher from './components/PrototypeSwitcher.vue'
-import VariantA from './prototypes/workbench/VariantA.vue'
-import VariantB from './prototypes/workbench/VariantB.vue'
-import VariantC from './prototypes/workbench/VariantC.vue'
+import VariantA from './prototypes/composition/VariantA.vue'
+import VariantB from './prototypes/composition/VariantB.vue'
+import VariantC from './prototypes/composition/VariantC.vue'
 import { compositionState } from './prototypes/workbench/prototypeState'
 
-// PROTOTYPE: Three variants of the single-page chart workbench, switchable via ?variant=A|B|C.
+// PROTOTYPE: Three Chart Composition editor variants inside the chosen three-column workbench.
 const variants = [
-  { key: 'A', name: '三栏工作台' },
-  { key: 'B', name: '画布优先' },
-  { key: 'C', name: '分步工作区' },
+  { key: 'A', name: '分组检查器' },
+  { key: 'B', name: '分段检查器' },
+  { key: 'C', name: '映射画布' },
 ] as const
 
 const readVariant = () => {

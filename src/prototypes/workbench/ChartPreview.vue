@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { compositionState, selectedFieldLabel, worksheetRows } from './prototypeState'
+import { compositionState, fields, worksheetRows } from './prototypeState'
 
-const max = Math.max(...worksheetRows.map((row) => row.east))
+const selectedSeries = computed(() => compositionState.seriesFields
+  .map((value) => fields.find((field) => field.value === value))
+  .filter(Boolean))
+const max = computed(() => Math.max(1, ...worksheetRows.flatMap((row) => compositionState.seriesFields.map(
+  (field) => Number(row[field as keyof typeof row] ?? 0),
+))))
 const points = computed(() => worksheetRows.map((row, index) => ({
   x: 9 + index * 16.4,
-  y: 83 - (Number(row[compositionState.valueField as keyof typeof row]) / max) * 63,
+  y: 83 - (Number(row[(compositionState.seriesFields[0] || 'east') as keyof typeof row]) / max.value) * 63,
 })))
 const linePoints = computed(() => points.value.map((point) => `${point.x},${point.y}`).join(' '))
 </script>
@@ -17,23 +22,36 @@ const linePoints = computed(() => points.value.map((point) => `${point.x},${poin
         <h2>{{ compositionState.title || '未命名图表' }}</h2>
         <p>单位：万元</p>
       </div>
-      <span v-if="compositionState.showLegend" class="chart-legend">
-        <i :style="{ background: compositionState.color }" />{{ selectedFieldLabel }}
-      </span>
+      <div v-if="compositionState.showLegend" class="chart-legends">
+        <span v-for="(series, index) in selectedSeries" :key="series!.value" class="chart-legend">
+          <i :style="{ background: compositionState.palette[index] || compositionState.color }" />{{ series!.label }}
+        </span>
+      </div>
     </div>
 
-    <div v-if="compositionState.chartType === 'bar'" class="bar-chart">
+    <div v-if="!compositionState.categoryField || !compositionState.seriesFields.length" class="chart-empty">
+      <strong>完成字段映射后显示预览</strong>
+      <span>请选择映射角色所需的 Field</span>
+    </div>
+
+    <div v-else-if="compositionState.chartType === 'bar'" class="bar-chart">
       <div v-for="row in worksheetRows" :key="row.month" class="bar-slot">
-        <div class="bar-value">{{ row[compositionState.valueField as keyof typeof row] }}</div>
-        <div class="bar" :style="{ height: `${Number(row[compositionState.valueField as keyof typeof row]) / max * 82}%`, background: compositionState.color }" />
+        <div class="bar-group">
+          <div
+            v-for="(series, index) in compositionState.seriesFields"
+            :key="series"
+            class="bar"
+            :style="{ height: `${Number(row[series as keyof typeof row] ?? 0) / max * 82}%`, background: compositionState.palette[index] || compositionState.color }"
+          />
+        </div>
         <span>{{ row.month }}</span>
       </div>
     </div>
 
     <svg v-else-if="compositionState.chartType === 'line'" class="line-chart" viewBox="0 0 100 92" preserveAspectRatio="none">
       <g class="grid-lines"><line v-for="y in [20, 40, 60, 80]" :key="y" x1="6" :y1="y" x2="96" :y2="y" /></g>
-      <polyline :points="linePoints" fill="none" :stroke="compositionState.color" stroke-width="2" vector-effect="non-scaling-stroke" />
-      <circle v-for="point in points" :key="point.x" :cx="point.x" :cy="point.y" r="1.4" :fill="compositionState.color" />
+      <polyline :points="linePoints" fill="none" :stroke="compositionState.palette[0]" stroke-width="2" vector-effect="non-scaling-stroke" />
+      <circle v-for="point in points" :key="point.x" :cx="point.x" :cy="point.y" r="1.4" :fill="compositionState.palette[0]" />
     </svg>
 
     <div v-else-if="compositionState.chartType === 'pie'" class="pie-wrap">
