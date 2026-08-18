@@ -3,7 +3,7 @@ import type { ChartType, FieldId } from './chartComposition'
 export type WorkbenchComposition = {
   chartType: ChartType | null
   categoryFieldId: FieldId | null
-  valueFieldIds: FieldId[]
+  valueFieldId: FieldId | null
   title: string
   selectedColor: string
   showLegend: boolean
@@ -15,7 +15,7 @@ export type WorkbenchComposition = {
 export const defaultComposition: WorkbenchComposition = {
   chartType: null,
   categoryFieldId: null,
-  valueFieldIds: [],
+  valueFieldId: null,
   title: '2026 上半年区域销售',
   selectedColor: '#2f6fed',
   showLegend: true,

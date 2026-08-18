@@ -33,7 +33,7 @@ describe('resolveChartComposition', () => {
     const input: ChartCompositionInput = {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     }
 
     expect(resolveChartComposition(worksheet, input)).toEqual({
@@ -76,7 +76,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithMixedField, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [2],
+      valueFieldId: 2,
     })
 
     expect(result.valid).toBe(false)
@@ -93,7 +93,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheet, {
       chartType: 'bar',
       categoryFieldId: null,
-      valueFieldIds: [],
+      valueFieldId: null,
     })
 
     expect(result).toEqual({
@@ -120,7 +120,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheet, {
       chartType: 'bar',
       categoryFieldId: 1,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     })
 
     expect(result.valid).toBe(false)
@@ -150,7 +150,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithBlankValue, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     })
 
     expect(result.valid).toBe(true)
@@ -181,7 +181,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithMissingCategory, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     })
 
     expect(result.valid).toBe(false)
@@ -216,7 +216,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithNumericText, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     })
 
     expect(result.valid).toBe(true)
@@ -240,7 +240,7 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithoutValues, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [1],
+      valueFieldId: 1,
     })
 
     expect(result.valid).toBe(false)
@@ -266,11 +266,36 @@ describe('resolveChartComposition', () => {
     const result = resolveChartComposition(worksheetWithDuplicateNames, {
       chartType: 'bar',
       categoryFieldId: 0,
-      valueFieldIds: [2],
+      valueFieldId: 2,
     })
 
     expect(result.chart?.series).toEqual([
       { fieldId: 2, name: '销售额', values: [9, 8, 7] },
+    ])
+  })
+
+  it('diagnoses stale Field identities for each Mapping Role', () => {
+    const result = resolveChartComposition(worksheet, {
+      chartType: 'bar',
+      categoryFieldId: 99,
+      valueFieldId: 100,
+    })
+
+    expect(result.valid).toBe(false)
+    expect(result.chart).toBeNull()
+    expect(result.diagnostics).toEqual([
+      {
+        role: 'category',
+        severity: 'error',
+        code: 'category-field-not-found',
+        message: '选择的 Category Field 已不在当前 Worksheet 中，请重新选择。',
+      },
+      {
+        role: 'value',
+        severity: 'error',
+        code: 'value-field-not-found',
+        message: '选择的 Value Field 已不在当前 Worksheet 中，请重新选择。',
+      },
     ])
   })
 })

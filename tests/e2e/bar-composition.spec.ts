@@ -23,7 +23,10 @@ test('user maps a bar composition and sees the matching live preview', async ({ 
   await page.getByRole('combobox', { name: '数值' }).focus()
   await page.getByRole('combobox', { name: '数值' }).press('ArrowDown')
   const valueOptions = page.getByRole('listbox').last()
-  await expect(valueOptions.getByRole('option', { name: /备注（G 列）/ })).toBeDisabled()
+  const unavailableValue = valueOptions.getByRole('option', {
+    name: /备注（G 列）.*不可用：包含不可转换的值，不能用于数值角色/,
+  })
+  await expect(unavailableValue).toBeDisabled()
   await valueOptions.getByRole('option', { name: /华东（B 列）/ }).click()
 
   await expect(page.getByRole('img', { name: '柱状图，华东，共 6 个 Record' })).toBeVisible()

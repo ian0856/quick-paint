@@ -2,6 +2,10 @@
 import { CircleCheck } from '@element-plus/icons-vue'
 import { ElAlert, ElIcon, ElOption, ElSelect } from 'element-plus'
 import { computed } from 'vue'
+import {
+  categoryFieldUnavailableReason,
+  valueFieldUnavailableReason,
+} from '../../chartComposition'
 import type {
   CompositionDiagnostic,
   FieldId,
@@ -48,16 +52,17 @@ const kindLabels: Record<WorksheetField['kind'], string> = {
   mixed: '混合',
 }
 
-function fieldLabel(field: WorksheetField) {
-  return `${field.name}（${field.sourceColumn} 列） · ${kindLabels[field.kind]} · ${field.profile.summary}`
+function fieldLabel(field: WorksheetField, unavailableReason: string | null) {
+  const availability = unavailableReason ? ` · 不可用：${unavailableReason}` : ''
+  return `${field.name}（${field.sourceColumn} 列） · ${kindLabels[field.kind]} · ${field.profile.summary}${availability}`
 }
 
-function categoryFieldDisabled(field: WorksheetField) {
-  return field.id === props.valueFieldId || field.values.every((value) => value === null)
+function categoryUnavailableReason(field: WorksheetField) {
+  return categoryFieldUnavailableReason(field, props.valueFieldId)
 }
 
-function valueFieldDisabled(field: WorksheetField) {
-  return !field.profile.numericRoleEligible || field.id === props.categoryFieldId
+function valueUnavailableReason(field: WorksheetField) {
+  return valueFieldUnavailableReason(field, props.categoryFieldId)
 }
 </script>
 
@@ -87,9 +92,9 @@ function valueFieldDisabled(field: WorksheetField) {
         <ElOption
           v-for="field in fields"
           :key="field.id"
-          :label="fieldLabel(field)"
+          :label="fieldLabel(field, categoryUnavailableReason(field))"
           :value="field.id"
-          :disabled="categoryFieldDisabled(field)"
+          :disabled="categoryUnavailableReason(field) !== null"
         />
       </ElSelect>
       <p
@@ -108,9 +113,9 @@ function valueFieldDisabled(field: WorksheetField) {
         <ElOption
           v-for="field in fields"
           :key="field.id"
-          :label="fieldLabel(field)"
+          :label="fieldLabel(field, valueUnavailableReason(field))"
           :value="field.id"
-          :disabled="valueFieldDisabled(field)"
+          :disabled="valueUnavailableReason(field) !== null"
         />
       </ElSelect>
       <p v-if="valueFieldId === null" class="field-guidance">

@@ -24,7 +24,7 @@ export type WorksheetInterpretation = {
 export type ChartCompositionInput = {
   chartType: ChartType | null
   categoryFieldId: FieldId | null
-  valueFieldIds: FieldId[]
+  valueFieldId: FieldId | null
 }
 
 export type CompositionDiagnostic = {
@@ -58,6 +58,24 @@ function normalizeNumericValue(value: SourceValue): number | null {
   if (typeof value !== 'string' || !STRICT_NUMBER.test(value.trim())) return null
   const numericValue = Number(value)
   return Number.isFinite(numericValue) ? numericValue : null
+}
+
+export function categoryFieldUnavailableReason(
+  field: WorksheetField,
+  valueFieldId: FieldId | null,
+): string | null {
+  if (field.id === valueFieldId) return '已用于 Value Mapping Role'
+  if (field.values.every((value) => value === null)) return '全部缺失，不能用于 Category'
+  return null
+}
+
+export function valueFieldUnavailableReason(
+  field: WorksheetField,
+  categoryFieldId: FieldId | null,
+): string | null {
+  if (field.id === categoryFieldId) return '已用于 Category Mapping Role'
+  if (!field.profile.numericRoleEligible) return '包含不可转换的值，不能用于数值角色'
+  return null
 }
 
 export function resolveChartComposition(
@@ -103,7 +121,7 @@ export function resolveChartComposition(
       message: '请选择 Category Field。',
     })
   }
-  if (input.valueFieldIds.length === 0) {
+  if (input.valueFieldId === null) {
     missingDiagnostics.push({
       role: 'value',
       severity: 'error',
@@ -116,10 +134,27 @@ export function resolveChartComposition(
   }
 
   const categoryField = worksheet.fields.find((field) => field.id === input.categoryFieldId)
-  const valueField = worksheet.fields.find((field) => field.id === input.valueFieldIds[0])
+  const valueField = worksheet.fields.find((field) => field.id === input.valueFieldId)
 
-  if (!categoryField || !valueField) {
-    return { valid: false, diagnostics: [], chart: null }
+  const staleFieldDiagnostics: CompositionDiagnostic[] = []
+  if (!categoryField) {
+    staleFieldDiagnostics.push({
+      role: 'category',
+      severity: 'error',
+      code: 'category-field-not-found',
+      message: '选择的 Category Field 已不在当前 Worksheet 中，请重新选择。',
+    })
+  }
+  if (!valueField) {
+    staleFieldDiagnostics.push({
+      role: 'value',
+      severity: 'error',
+      code: 'value-field-not-found',
+      message: '选择的 Value Field 已不在当前 Worksheet 中，请重新选择。',
+    })
+  }
+  if (staleFieldDiagnostics.length > 0 || !categoryField || !valueField) {
+    return { valid: false, diagnostics: staleFieldDiagnostics, chart: null }
   }
 
   if (categoryField.id === valueField.id) {
@@ -137,7 +172,8 @@ export function resolveChartComposition(
     }
   }
 
-  if (categoryField.values.every((value) => value === null)) {
+  const categoryUnavailableReason = categoryFieldUnavailableReason(categoryField, valueField.id)
+  if (categoryUnavailableReason) {
     return {
       valid: false,
       diagnostics: [
@@ -145,14 +181,15 @@ export function resolveChartComposition(
           role: 'category',
           severity: 'error',
           code: 'category-field-all-missing',
-          message: `“${categoryField.name}（${categoryField.sourceColumn} 列）”全部缺失，不能用于 Category。`,
+          message: `“${categoryField.name}（${categoryField.sourceColumn} 列）”${categoryUnavailableReason}。`,
         },
       ],
       chart: null,
     }
   }
 
-  if (!valueField.profile.numericRoleEligible) {
+  const valueUnavailableReason = valueFieldUnavailableReason(valueField, categoryField.id)
+  if (valueUnavailableReason) {
     return {
       valid: false,
       diagnostics: [
@@ -160,7 +197,7 @@ export function resolveChartComposition(
           role: 'value',
           severity: 'error',
           code: 'value-field-not-numeric',
-          message: `“${valueField.name}（${valueField.sourceColumn} 列）”包含不可转换的值，不能用于数值角色。`,
+          message: `“${valueField.name}（${valueField.sourceColumn} 列）”${valueUnavailableReason}。`,
         },
       ],
       chart: null,

@@ -9,16 +9,13 @@ import { demoWorksheet } from './demoWorksheet'
 import { defaultComposition } from './workbenchModel'
 import type { ChartType, WorkbenchComposition } from './workbenchModel'
 
-const composition = reactive<WorkbenchComposition>({
-  ...defaultComposition,
-  valueFieldIds: [...defaultComposition.valueFieldIds],
-})
+const composition = reactive<WorkbenchComposition>({ ...defaultComposition })
 
 const compositionResult = computed(() =>
   resolveChartComposition(demoWorksheet, {
     chartType: composition.chartType,
     categoryFieldId: composition.categoryFieldId,
-    valueFieldIds: composition.valueFieldIds,
+    valueFieldId: composition.valueFieldId,
   }),
 )
 const compositionReady = computed(() => compositionResult.value.valid)
@@ -33,7 +30,7 @@ function changeChartType(nextType: ChartType) {
   composition.chartType = nextType
   if (!preservesMapping) {
     composition.categoryFieldId = null
-    composition.valueFieldIds = []
+    composition.valueFieldId = null
   }
 }
 

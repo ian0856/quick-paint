@@ -19,9 +19,23 @@ const viewOptions = [
 ]
 
 const chart = computed(() => props.result.chart)
-const maxValue = computed(() => {
+const axis = computed(() => {
   const values = chart.value?.series.flatMap((series) => series.values) ?? []
-  return Math.max(1, ...values.filter((value): value is number => value !== null))
+  const numericValues = values.filter((value): value is number => value !== null)
+  const minimum = Math.min(0, ...numericValues)
+  const maximum = Math.max(0, ...numericValues)
+  return minimum === maximum
+    ? { minimum: 0, maximum: 1, range: 1 }
+    : { minimum, maximum, range: maximum - minimum }
+})
+const axisLabels = computed(() =>
+  Array.from({ length: 4 }, (_, index) =>
+    formatAxisValue(axis.value.maximum - (axis.value.range * index) / 3),
+  ),
+)
+const zeroLinePosition = computed(() => {
+  const ratio = axis.value.maximum / axis.value.range
+  return `calc(${ratio * 100}% - ${ratio * 25}px)`
 })
 const chartRecords = computed(() => {
   if (!chart.value) return []
@@ -32,7 +46,14 @@ const chartRecords = computed(() => {
       key: index,
       category,
       value,
-      height: value === null ? '0%' : `${Math.max(0, value / maxValue.value) * 100}%`,
+      barStyle: value === null
+        ? {}
+        : {
+            bottom: `${((Math.min(value, 0) - axis.value.minimum) / axis.value.range) * 100}%`,
+            height: `${(Math.abs(value) / axis.value.range) * 100}%`,
+            backgroundColor: props.composition.selectedColor,
+            borderRadius: value < 0 ? '0 0 3px 3px' : '3px 3px 0 0',
+          },
     }
   })
 })
@@ -55,6 +76,10 @@ function formatSourceValue(value: SourceValue) {
   if (value === null) return '（空白）'
   if (typeof value === 'boolean') return value ? '是' : '否'
   return String(value)
+}
+
+function formatAxisValue(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 </script>
 
@@ -83,15 +108,15 @@ function formatSourceValue(value: SourceValue) {
 
           <div class="chart-body" role="img" :aria-label="chartAriaLabel">
             <div class="y-axis" aria-hidden="true">
-              <span class="axis-label">{{ maxValue }}</span>
-              <span class="axis-label">{{ Math.round(maxValue * 0.67) }}</span>
-              <span class="axis-label">{{ Math.round(maxValue * 0.33) }}</span>
-              <span class="axis-label">0</span>
+              <span v-for="axisLabel in axisLabels" :key="axisLabel" class="axis-label">
+                {{ axisLabel }}
+              </span>
             </div>
             <div class="plot">
               <div class="grid-lines" aria-hidden="true">
                 <i v-for="line in 4" :key="line" class="grid-line" />
               </div>
+              <i class="zero-line" :style="{ top: zeroLinePosition }" aria-hidden="true" />
               <div
                 class="bar-slots"
                 :style="{ gridTemplateColumns: `repeat(${chartRecords.length}, minmax(42px, 1fr))` }"
@@ -104,7 +129,7 @@ function formatSourceValue(value: SourceValue) {
                     <i
                       v-if="record.value !== null"
                       class="bar"
-                      :style="{ height: record.height, backgroundColor: composition.selectedColor }"
+                      :style="record.barStyle"
                     />
                   </div>
                   <span class="bar-label">{{ record.category }}</span>
@@ -270,6 +295,13 @@ function formatSourceValue(value: SourceValue) {
   border-top: 1px solid #e9ecf1;
 }
 
+.zero-line {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px solid #b8c0cc;
+}
+
 .bar-slots {
   position: absolute;
   inset: 0;
@@ -285,17 +317,16 @@ function formatSourceValue(value: SourceValue) {
 
 .bar-group {
   position: relative;
-  display: flex;
-  align-items: end;
-  justify-content: center;
   min-height: 0;
 }
 
 .bar {
+  position: absolute;
+  left: 50%;
   display: block;
   width: min(48%, 34px);
   min-height: 2px;
-  border-radius: 3px 3px 0 0;
+  transform: translateX(-50%);
 }
 
 .data-label {

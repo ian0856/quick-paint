@@ -40,11 +40,11 @@ const emit = defineEmits<{
         :fields="worksheet.fields"
         :chart-type="composition.chartType"
         :category-field-id="composition.categoryFieldId"
-        :value-field-id="composition.valueFieldIds[0] ?? null"
+        :value-field-id="composition.valueFieldId"
         :diagnostics="result.diagnostics"
         :ready="result.valid"
         @update-category="emit('updateComposition', { categoryFieldId: $event })"
-        @update-value="emit('updateComposition', { valueFieldIds: $event === null ? [] : [$event] })"
+        @update-value="emit('updateComposition', { valueFieldId: $event })"
       />
       <AppearanceSection
         :title="composition.title"
