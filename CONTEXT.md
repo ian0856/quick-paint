@@ -48,6 +48,10 @@ _Avoid_: Valid Worksheet, parsed Worksheet
 The editable chart created by manually mapping Worksheet fields to a chart type and presentation settings.
 _Avoid_: Chart recommendation, generated image, graph
 
+**Chart Image Settings**:
+The export-specific pixel size, background, and filename retained for the current Chart Composition session.
+_Avoid_: Export options, download settings
+
 **Chart Image**:
-The PNG exported from a Chart Composition.
+The PNG exported from a Chart Composition, with an explicit final pixel size and export background.
 _Avoid_: Report, screenshot
