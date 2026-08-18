@@ -3,6 +3,8 @@ import { FolderOpened, RefreshRight } from '@element-plus/icons-vue'
 import { ElButton, ElIcon, ElOption, ElSelect, ElTag } from 'element-plus'
 import { shallowRef } from 'vue'
 
+defineProps<{ compositionReady: boolean }>()
+
 const worksheet = shallowRef('区域销售')
 
 const fields = [
@@ -16,50 +18,69 @@ const fields = [
 <template>
   <aside class="source-panel" aria-label="Data Source">
     <div class="panel-heading">
-      <span>Data Source</span>
-      <el-tag size="small" type="success" effect="light">就绪</el-tag>
+      <span class="panel-title">Data Source</span>
+      <ElTag size="small" type="success" effect="light">就绪</ElTag>
     </div>
 
     <button class="source-file" type="button">
-      <el-icon><FolderOpened /></el-icon>
-      <span>
-        <strong>2026 上半年区域销售.xlsx</strong>
-        <small>248 KB · 本地文件</small>
+      <ElIcon><FolderOpened /></ElIcon>
+      <span class="source-file-copy">
+        <strong class="source-file-name">2026 上半年区域销售.xlsx</strong>
+        <small class="source-file-meta">248 KB · 本地文件</small>
       </span>
     </button>
 
     <label class="field-label" for="worksheet-select">Worksheet</label>
-    <el-select id="worksheet-select" v-model="worksheet" aria-label="Worksheet">
-      <el-option label="区域销售" value="区域销售" />
-      <el-option label="产品销售" value="产品销售" />
-    </el-select>
+    <ElSelect id="worksheet-select" v-model="worksheet" aria-label="Worksheet">
+      <ElOption label="区域销售" value="区域销售" />
+      <ElOption label="产品销售" value="产品销售" />
+    </ElSelect>
 
     <div class="source-meta">
-      <span><strong>6</strong> 条 Record</span>
-      <span><strong>7</strong> 个 Field</span>
+      <span class="meta-item"><strong class="meta-value">6</strong> 条 Record</span>
+      <span class="meta-item"><strong class="meta-value">7</strong> 个 Field</span>
     </div>
 
-    <el-button class="replace-button" text>
-      <el-icon><RefreshRight /></el-icon>
+    <ElButton class="replace-button" text>
+      <ElIcon><RefreshRight /></ElIcon>
       更换 Data Source
-    </el-button>
+    </ElButton>
+
+    <div class="flow-section">
+      <div class="field-section-heading">
+        <span class="section-label">制图流程</span>
+        <small class="section-count">2 / 3</small>
+      </div>
+      <ol class="flow-list">
+        <li class="flow-item is-complete">
+          <i class="flow-marker">✓</i><span class="flow-label">选择数据</span>
+        </li>
+        <li class="flow-item" :class="{ 'is-complete': compositionReady }">
+          <i class="flow-marker">{{ compositionReady ? '✓' : '2' }}</i>
+          <span class="flow-label">配置图表</span>
+        </li>
+        <li class="flow-item is-current">
+          <i class="flow-marker">3</i><span class="flow-label">导出图片</span>
+        </li>
+      </ol>
+    </div>
 
     <div class="field-section-heading">
-      <span>Field Profile</span>
-      <small>4 / 7</small>
+      <span class="section-label">Field Profile</span>
+      <small class="section-count">4 / 7</small>
     </div>
     <ul class="field-list">
       <li v-for="field in fields" :key="field.name">
         <i :class="`field-kind field-kind--${field.tone}`">{{ field.kind }}</i>
-        <span>
-          <strong>{{ field.name }}</strong>
-          <small>{{ field.detail }}</small>
+        <span class="field-copy">
+          <strong class="field-name">{{ field.name }}</strong>
+          <small class="field-detail">{{ field.detail }}</small>
         </span>
       </li>
     </ul>
 
     <div class="privacy-note">
-      <span aria-hidden="true">✓</span>
+      <span class="privacy-check" aria-hidden="true">✓</span>
       数据仅在当前浏览器中处理
     </div>
   </aside>
@@ -74,6 +95,7 @@ const fields = [
   border-right: 1px solid var(--border);
   background: var(--surface);
   box-sizing: border-box;
+  overflow: auto;
 }
 
 .panel-heading,
@@ -122,23 +144,23 @@ const fields = [
   font-size: 22px;
 }
 
-.source-file span,
-.field-list li > span {
+.source-file-copy,
+.field-copy {
   display: flex;
   min-width: 0;
   flex-direction: column;
 }
 
-.source-file strong {
+.source-file-name {
   overflow: hidden;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.source-file small,
-.field-list small,
-.field-section-heading small {
+.source-file-meta,
+.field-detail,
+.section-count {
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 400;
@@ -159,7 +181,7 @@ const fields = [
   font-size: 10px;
 }
 
-.source-meta strong {
+.meta-value {
   color: var(--text-strong);
   font-size: 12px;
 }
@@ -183,7 +205,7 @@ const fields = [
   list-style: none;
 }
 
-.field-list li {
+.field-list > li {
   display: flex;
   gap: 9px;
   align-items: center;
@@ -191,11 +213,11 @@ const fields = [
   border-radius: 5px;
 }
 
-.field-list li:hover {
+.field-list > li:hover {
   background: var(--surface-subtle);
 }
 
-.field-list strong {
+.field-name {
   color: var(--text);
   font-size: 11px;
 }
@@ -238,8 +260,58 @@ const fields = [
   font-size: 10px;
 }
 
-.privacy-note span {
+.privacy-check {
   color: var(--success);
   font-weight: 700;
+}
+
+.flow-section {
+  padding-top: 2px;
+}
+
+.flow-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.flow-marker {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.flow-item.is-complete .flow-marker {
+  border-color: #bce6d2;
+  color: #18724d;
+  background: #eaf8f1;
+}
+
+.flow-item.is-current .flow-marker {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #edf3ff;
+}
+
+.flow-item.is-current .flow-label {
+  color: var(--text-strong);
+  font-weight: 600;
 }
 </style>

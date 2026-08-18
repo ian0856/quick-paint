@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import { DataLine, Download } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
+
+defineProps<{ ready: boolean }>()
 </script>
 
 <template>
   <header class="app-header">
     <div class="brand" aria-label="Quick Paint">
-      <span class="brand-mark" aria-hidden="true"><DataLine /></span>
+      <span class="brand-mark" aria-hidden="true"><DataLine class="brand-icon" /></span>
       <strong>Quick Paint</strong>
     </div>
     <div class="header-actions">
-      <span class="ready-status"><i aria-hidden="true" />Chart Composition 已就绪</span>
-      <el-button type="primary">
-        <el-icon><Download /></el-icon>
+      <span class="ready-status">
+        <i class="ready-dot" aria-hidden="true" />
+        {{ ready ? 'Chart Composition 已就绪' : '字段映射未完成' }}
+      </span>
+      <ElButton type="primary" :disabled="!ready">
+        <ElIcon><Download /></ElIcon>
         导出 PNG
-      </el-button>
+      </ElButton>
     </div>
   </header>
 </template>
@@ -56,7 +61,7 @@ import { ElButton, ElIcon } from 'element-plus'
   background: var(--primary);
 }
 
-.brand-mark :deep(svg) {
+.brand-icon {
   width: 18px;
   height: 18px;
 }
@@ -71,7 +76,7 @@ import { ElButton, ElIcon } from 'element-plus'
   font-size: 12px;
 }
 
-.ready-status i {
+.ready-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;

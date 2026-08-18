@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { ElSegmented, ElTable, ElTableColumn, ElTag } from 'element-plus'
 import { computed, shallowRef } from 'vue'
+import type { WorkbenchComposition } from '../workbenchModel'
 
 type ViewMode = 'chart' | 'data'
+
+const props = defineProps<{
+  composition: WorkbenchComposition
+  ready: boolean
+}>()
 
 const viewMode = shallowRef<ViewMode>('chart')
 const viewOptions = [
@@ -32,58 +38,71 @@ const chartRecords = computed(() =>
 <template>
   <section class="chart-stage" aria-label="工作区预览">
     <div class="stage-toolbar">
-      <el-segmented v-model="viewMode" :options="viewOptions" aria-label="预览方式" />
-      <span class="image-size">1600 × 900 px</span>
+      <ElSegmented v-model="viewMode" :options="viewOptions" aria-label="预览方式" />
+      <span class="image-size">{{ composition.width }} × {{ composition.height }} px</span>
     </div>
 
     <div class="stage-content">
-      <article v-show="viewMode === 'chart'" class="chart-paper">
-        <header class="chart-heading">
-          <div>
-            <h1>2026 上半年区域销售</h1>
-            <p>单位：万元</p>
-          </div>
-          <div class="legend" aria-label="Series 图例">
-            <span><i class="legend-east" />华东</span>
-            <span><i class="legend-south" />华南</span>
-          </div>
-        </header>
+      <article v-show="viewMode === 'chart'" class="chart-paper" :class="{ 'is-empty': !ready }">
+        <template v-if="ready">
+          <header class="chart-heading">
+            <div class="chart-title-group">
+              <h1 class="chart-title">{{ composition.title || '未命名图表' }}</h1>
+              <p class="chart-unit">单位：万元</p>
+            </div>
+            <div v-if="composition.showLegend" class="legend" aria-label="Series 图例">
+              <span class="legend-item">
+                <i class="legend-swatch" :style="{ backgroundColor: composition.selectedColor }" />华东
+              </span>
+              <span class="legend-item"><i class="legend-swatch legend-south" />华南</span>
+            </div>
+          </header>
 
-        <div class="chart-body" role="img" aria-label="柱状图，展示一月至六月的华东和华南销售额">
-          <div class="y-axis" aria-hidden="true">
-            <span>180</span>
-            <span>120</span>
-            <span>60</span>
-            <span>0</span>
-          </div>
-          <div class="plot">
-            <div class="grid-lines" aria-hidden="true"><i /><i /><i /><i /></div>
-            <div class="bar-slots">
-              <div v-for="record in chartRecords" :key="record.month" class="bar-slot">
-                <div class="bar-group">
-                  <i class="bar bar--east" :style="{ height: record.eastHeight }" />
-                  <i class="bar bar--south" :style="{ height: record.southHeight }" />
+          <div class="chart-body" role="img" aria-label="柱状图，展示一月至六月的华东和华南销售额">
+            <div class="y-axis" aria-hidden="true">
+              <span class="axis-label">180</span>
+              <span class="axis-label">120</span>
+              <span class="axis-label">60</span>
+              <span class="axis-label">0</span>
+            </div>
+            <div class="plot">
+              <div class="grid-lines" aria-hidden="true">
+                <i v-for="line in 4" :key="line" class="grid-line" />
+              </div>
+              <div class="bar-slots">
+                <div v-for="record in chartRecords" :key="record.month" class="bar-slot">
+                  <div class="bar-group">
+                    <i
+                      class="bar"
+                      :style="{ height: record.eastHeight, backgroundColor: composition.selectedColor }"
+                    />
+                    <i class="bar bar--south" :style="{ height: record.southHeight }" />
+                  </div>
+                  <span class="bar-label">{{ record.month }}</span>
                 </div>
-                <span>{{ record.month }}</span>
               </div>
             </div>
           </div>
+        </template>
+        <div v-else class="chart-empty">
+          <strong class="empty-title">完成字段映射后显示预览</strong>
+          <span class="empty-copy">请选择 Mapping Role 所需的 Field</span>
         </div>
       </article>
 
       <article v-show="viewMode === 'data'" class="data-paper">
         <header class="data-heading">
-          <div>
-            <h1>区域销售</h1>
-            <p>6 条 Record · 3 个可见 Field</p>
+          <div class="data-title-group">
+            <h1 class="data-title">区域销售</h1>
+            <p class="data-summary">6 条 Record · 3 个可见 Field</p>
           </div>
-          <el-tag type="success" effect="light">Worksheet Interpretation</el-tag>
+          <ElTag type="success" effect="light">Worksheet Interpretation</ElTag>
         </header>
-        <el-table :data="records" height="100%" stripe>
-          <el-table-column prop="month" label="月份" />
-          <el-table-column prop="east" label="华东" align="right" />
-          <el-table-column prop="south" label="华南" align="right" />
-        </el-table>
+        <ElTable :data="records" height="100%" stripe>
+          <ElTableColumn prop="month" label="月份" />
+          <ElTableColumn prop="east" label="华东" align="right" />
+          <ElTableColumn prop="south" label="华南" align="right" />
+        </ElTable>
       </article>
     </div>
   </section>
@@ -144,7 +163,7 @@ const chartRecords = computed(() =>
 .chart-heading,
 .data-heading,
 .legend,
-.legend span {
+.legend-item {
   display: flex;
   align-items: center;
 }
@@ -154,16 +173,16 @@ const chartRecords = computed(() =>
   justify-content: space-between;
 }
 
-.chart-heading h1,
-.data-heading h1 {
+.chart-title,
+.data-title {
   margin: 0 0 5px;
   color: var(--text-strong);
   font-size: 20px;
   line-height: 1.25;
 }
 
-.chart-heading p,
-.data-heading p {
+.chart-unit,
+.data-summary {
   margin: 0;
   color: var(--text-muted);
   font-size: 11px;
@@ -175,19 +194,14 @@ const chartRecords = computed(() =>
   font-size: 11px;
 }
 
-.legend span {
+.legend-item {
   gap: 6px;
 }
 
-.legend i {
+.legend-swatch {
   width: 9px;
   height: 9px;
   border-radius: 2px;
-}
-
-.legend-east,
-.bar--east {
-  background: #2f6fed;
 }
 
 .legend-south,
@@ -225,7 +239,7 @@ const chartRecords = computed(() =>
   justify-content: space-between;
 }
 
-.grid-lines i {
+.grid-line {
   width: 100%;
   border-top: 1px solid #e9ecf1;
 }
@@ -259,7 +273,7 @@ const chartRecords = computed(() =>
   border-radius: 3px 3px 0 0;
 }
 
-.bar-slot > span {
+.bar-label {
   align-self: end;
   overflow: hidden;
   color: var(--text-muted);
@@ -267,6 +281,29 @@ const chartRecords = computed(() =>
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chart-paper.is-empty {
+  display: grid;
+  place-items: center;
+}
+
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty-title {
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.empty-copy {
+  font-size: 11px;
 }
 
 .data-paper {
