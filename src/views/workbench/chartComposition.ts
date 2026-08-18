@@ -51,11 +51,15 @@ export type ChartCompositionResult = {
 }
 
 export type FieldUnavailableReason = {
-  code: 'field-role-conflict' | 'category-field-all-missing' | 'value-field-not-numeric'
-  message: string
+  readonly code: 'field-role-conflict' | 'category-field-all-missing' | 'value-field-not-numeric'
+  readonly message: string
 }
 
 const STRICT_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
+const FIELD_ROLE_CONFLICT_REASON: FieldUnavailableReason = {
+  code: 'field-role-conflict',
+  message: '同一 Field 不能同时用于 Category 和 Value',
+}
 
 function normalizeNumericValue(value: SourceValue): number | null {
   if (value === null) return null
@@ -69,12 +73,7 @@ export function categoryFieldUnavailableReason(
   field: WorksheetField,
   valueFieldId: FieldId | null,
 ): FieldUnavailableReason | null {
-  if (field.id === valueFieldId) {
-    return {
-      code: 'field-role-conflict',
-      message: '同一 Field 不能同时用于 Category 和 Value',
-    }
-  }
+  if (field.id === valueFieldId) return FIELD_ROLE_CONFLICT_REASON
   if (field.values.every((value) => value === null)) {
     return {
       code: 'category-field-all-missing',
@@ -88,12 +87,7 @@ export function valueFieldUnavailableReason(
   field: WorksheetField,
   categoryFieldId: FieldId | null,
 ): FieldUnavailableReason | null {
-  if (field.id === categoryFieldId) {
-    return {
-      code: 'field-role-conflict',
-      message: '同一 Field 不能同时用于 Category 和 Value',
-    }
-  }
+  if (field.id === categoryFieldId) return FIELD_ROLE_CONFLICT_REASON
   if (!field.profile.numericRoleEligible) {
     return {
       code: 'value-field-not-numeric',
