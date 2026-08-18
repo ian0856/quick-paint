@@ -9,6 +9,7 @@ import {
 import type {
   CompositionDiagnostic,
   FieldId,
+  FieldUnavailableReason,
   WorksheetField,
 } from '../../chartComposition'
 import type { ChartType } from '../../workbenchModel'
@@ -52,8 +53,8 @@ const kindLabels: Record<WorksheetField['kind'], string> = {
   mixed: '混合',
 }
 
-function fieldLabel(field: WorksheetField, unavailableReason: string | null) {
-  const availability = unavailableReason ? ` · 不可用：${unavailableReason}` : ''
+function fieldLabel(field: WorksheetField, unavailableReason: FieldUnavailableReason | null) {
+  const availability = unavailableReason ? ` · 不可用：${unavailableReason.message}` : ''
   return `${field.name}（${field.sourceColumn} 列） · ${kindLabels[field.kind]} · ${field.profile.summary}${availability}`
 }
 

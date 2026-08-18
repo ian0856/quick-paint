@@ -17,6 +17,10 @@ const viewOptions = [
   { label: '图表预览', value: 'chart' },
   { label: '数据预览', value: 'data' },
 ]
+const axisNumberFormat = new Intl.NumberFormat('zh-CN', {
+  maximumSignificantDigits: 4,
+  useGrouping: false,
+})
 
 const chart = computed(() => props.result.chart)
 const axis = computed(() => {
@@ -29,9 +33,10 @@ const axis = computed(() => {
     : { minimum, maximum, range: maximum - minimum }
 })
 const axisLabels = computed(() =>
-  Array.from({ length: 4 }, (_, index) =>
-    formatAxisValue(axis.value.maximum - (axis.value.range * index) / 3),
-  ),
+  Array.from({ length: 4 }, (_, index) => ({
+    key: index,
+    label: formatAxisValue(axis.value.maximum - (axis.value.range * index) / 3),
+  })),
 )
 const zeroLinePosition = computed(() => {
   const ratio = axis.value.maximum / axis.value.range
@@ -79,7 +84,7 @@ function formatSourceValue(value: SourceValue) {
 }
 
 function formatAxisValue(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+  return axisNumberFormat.format(Math.abs(value) < Number.EPSILON ? 0 : value)
 }
 </script>
 
@@ -108,8 +113,8 @@ function formatAxisValue(value: number) {
 
           <div class="chart-body" role="img" :aria-label="chartAriaLabel">
             <div class="y-axis" aria-hidden="true">
-              <span v-for="axisLabel in axisLabels" :key="axisLabel" class="axis-label">
-                {{ axisLabel }}
+              <span v-for="axisLabel in axisLabels" :key="axisLabel.key" class="axis-label">
+                {{ axisLabel.label }}
               </span>
             </div>
             <div class="plot">

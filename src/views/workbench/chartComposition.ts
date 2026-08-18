@@ -50,6 +50,11 @@ export type ChartCompositionResult = {
   chart: NormalizedBarChart | null
 }
 
+export type FieldUnavailableReason = {
+  code: 'field-role-conflict' | 'category-field-all-missing' | 'value-field-not-numeric'
+  message: string
+}
+
 const STRICT_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
 
 function normalizeNumericValue(value: SourceValue): number | null {
@@ -63,18 +68,38 @@ function normalizeNumericValue(value: SourceValue): number | null {
 export function categoryFieldUnavailableReason(
   field: WorksheetField,
   valueFieldId: FieldId | null,
-): string | null {
-  if (field.id === valueFieldId) return '已用于 Value Mapping Role'
-  if (field.values.every((value) => value === null)) return '全部缺失，不能用于 Category'
+): FieldUnavailableReason | null {
+  if (field.id === valueFieldId) {
+    return {
+      code: 'field-role-conflict',
+      message: '同一 Field 不能同时用于 Category 和 Value',
+    }
+  }
+  if (field.values.every((value) => value === null)) {
+    return {
+      code: 'category-field-all-missing',
+      message: '全部缺失，不能用于 Category',
+    }
+  }
   return null
 }
 
 export function valueFieldUnavailableReason(
   field: WorksheetField,
   categoryFieldId: FieldId | null,
-): string | null {
-  if (field.id === categoryFieldId) return '已用于 Category Mapping Role'
-  if (!field.profile.numericRoleEligible) return '包含不可转换的值，不能用于数值角色'
+): FieldUnavailableReason | null {
+  if (field.id === categoryFieldId) {
+    return {
+      code: 'field-role-conflict',
+      message: '同一 Field 不能同时用于 Category 和 Value',
+    }
+  }
+  if (!field.profile.numericRoleEligible) {
+    return {
+      code: 'value-field-not-numeric',
+      message: '包含不可转换的值，不能用于数值角色',
+    }
+  }
   return null
 }
 
@@ -157,22 +182,24 @@ export function resolveChartComposition(
     return { valid: false, diagnostics: staleFieldDiagnostics, chart: null }
   }
 
-  if (categoryField.id === valueField.id) {
+  const categoryUnavailableReason = categoryFieldUnavailableReason(categoryField, valueField.id)
+  const valueUnavailableReason = valueFieldUnavailableReason(valueField, categoryField.id)
+
+  if (valueUnavailableReason?.code === 'field-role-conflict') {
     return {
       valid: false,
       diagnostics: [
         {
           role: 'value',
           severity: 'error',
-          code: 'field-role-conflict',
-          message: '同一 Field 不能同时用于 Category 和 Value。',
+          code: valueUnavailableReason.code,
+          message: `${valueUnavailableReason.message}。`,
         },
       ],
       chart: null,
     }
   }
 
-  const categoryUnavailableReason = categoryFieldUnavailableReason(categoryField, valueField.id)
   if (categoryUnavailableReason) {
     return {
       valid: false,
@@ -180,15 +207,14 @@ export function resolveChartComposition(
         {
           role: 'category',
           severity: 'error',
-          code: 'category-field-all-missing',
-          message: `“${categoryField.name}（${categoryField.sourceColumn} 列）”${categoryUnavailableReason}。`,
+          code: categoryUnavailableReason.code,
+          message: `“${categoryField.name}（${categoryField.sourceColumn} 列）”${categoryUnavailableReason.message}。`,
         },
       ],
       chart: null,
     }
   }
 
-  const valueUnavailableReason = valueFieldUnavailableReason(valueField, categoryField.id)
   if (valueUnavailableReason) {
     return {
       valid: false,
@@ -196,8 +222,8 @@ export function resolveChartComposition(
         {
           role: 'value',
           severity: 'error',
-          code: 'value-field-not-numeric',
-          message: `“${valueField.name}（${valueField.sourceColumn} 列）”${valueUnavailableReason}。`,
+          code: valueUnavailableReason.code,
+          message: `“${valueField.name}（${valueField.sourceColumn} 列）”${valueUnavailableReason.message}。`,
         },
       ],
       chart: null,
