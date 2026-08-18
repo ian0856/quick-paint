@@ -1,122 +1,135 @@
 <script setup lang="ts">
-import { CircleCheck, Warning } from '@element-plus/icons-vue'
+import { CircleCheck } from '@element-plus/icons-vue'
 import { ElAlert, ElIcon, ElOption, ElSelect } from 'element-plus'
 import { computed } from 'vue'
+import type {
+  CompositionDiagnostic,
+  FieldId,
+  WorksheetField,
+} from '../../chartComposition'
 import type { ChartType } from '../../workbenchModel'
-import { fieldOptions } from '../inspectorOptions'
 
 const props = defineProps<{
-  chartType: ChartType
-  categoryField: string
-  seriesFields: string[]
+  chartType: ChartType | null
+  fields: WorksheetField[]
+  categoryFieldId: FieldId | null
+  valueFieldId: FieldId | null
+  diagnostics: CompositionDiagnostic[]
   ready: boolean
 }>()
 
 const emit = defineEmits<{
-  updateCategory: [value: string]
-  updateSeries: [value: string[]]
+  updateCategory: [value: FieldId | null]
+  updateValue: [value: FieldId | null]
 }>()
 
-const mappingRoles = computed(() => {
-  if (props.chartType === 'pie') return { primary: '名称', series: '数值', multiple: false }
-  if (props.chartType === 'scatter') return { primary: 'X 轴', series: 'Y 轴', multiple: true }
-  return { primary: '类别', series: '数值系列', multiple: true }
-})
-
 const categoryModel = computed({
-  get: () => props.categoryField,
-  set: (value: string) => emit('updateCategory', value),
+  get: () => props.categoryFieldId,
+  set: (value: FieldId | null) => emit('updateCategory', value),
 })
 
-const seriesModel = computed({
-  get: () => props.seriesFields,
-  set: (value: string[]) => emit('updateSeries', value),
+const valueModel = computed({
+  get: () => props.valueFieldId,
+  set: (value: FieldId | null) => emit('updateValue', value),
 })
 
-const singleSeriesModel = computed({
-  get: () => props.seriesFields[0] ?? '',
-  set: (value: string) => emit('updateSeries', value ? [value] : []),
-})
-
-const mappingWarning = computed(() =>
-  props.seriesFields.includes('west') ? '“华西”有 1 个缺失值，将保留类别位置。' : '',
+const categoryDiagnostics = computed(() =>
+  props.diagnostics.filter((diagnostic) => diagnostic.role === 'category'),
+)
+const valueDiagnostics = computed(() =>
+  props.diagnostics.filter((diagnostic) => diagnostic.role === 'value'),
 )
 
-function primaryFieldDisabled(field: (typeof fieldOptions)[number]) {
-  if (props.seriesFields.includes(field.value)) return true
-  return props.chartType === 'scatter' && !field.numeric
+const kindLabels: Record<WorksheetField['kind'], string> = {
+  text: '文本',
+  number: '数字',
+  date: '日期',
+  boolean: '布尔',
+  mixed: '混合',
+}
+
+function fieldLabel(field: WorksheetField) {
+  return `${field.name}（${field.sourceColumn} 列） · ${kindLabels[field.kind]} · ${field.profile.summary}`
+}
+
+function categoryFieldDisabled(field: WorksheetField) {
+  return field.id === props.valueFieldId || field.values.every((value) => value === null)
+}
+
+function valueFieldDisabled(field: WorksheetField) {
+  return !field.profile.numericRoleEligible || field.id === props.categoryFieldId
 }
 </script>
 
 <template>
   <section class="inspector-section">
     <h2 class="section-title"><span class="section-number">02</span>字段映射</h2>
+    <ElAlert
+      v-if="chartType === null"
+      title="请先选择图表类型"
+      type="warning"
+      :closable="false"
+      show-icon
+    />
+    <ElAlert
+      v-else-if="chartType !== 'bar'"
+      title="当前切片仅支持柱状图预览"
+      type="info"
+      :closable="false"
+      show-icon
+    />
+    <template v-else>
     <div class="control-group">
       <label class="control-label">
-        {{ mappingRoles.primary }} <em class="required-mark">必填</em>
+        类别 <em class="required-mark">必填</em>
       </label>
-      <ElSelect v-model="categoryModel" clearable :aria-label="mappingRoles.primary">
+      <ElSelect v-model="categoryModel" clearable aria-label="类别">
         <ElOption
-          v-for="field in fieldOptions"
-          :key="field.value"
-          :label="`${field.label} · ${field.kind} · ${field.detail}`"
-          :value="field.value"
-          :disabled="primaryFieldDisabled(field)"
+          v-for="field in fields"
+          :key="field.id"
+          :label="fieldLabel(field)"
+          :value="field.id"
+          :disabled="categoryFieldDisabled(field)"
         />
       </ElSelect>
-    </div>
-    <div class="control-group">
-      <label class="control-label">
-        {{ mappingRoles.series }} <em class="required-mark">必填</em>
-        <small v-if="mappingRoles.multiple" class="control-hint">最多 8 个</small>
-      </label>
-      <ElSelect
-        v-if="mappingRoles.multiple"
-        v-model="seriesModel"
-        multiple
-        :multiple-limit="8"
-        collapse-tags
-        :max-collapse-tags="2"
-        clearable
-        :aria-label="mappingRoles.series"
+      <p
+        v-for="diagnostic in categoryDiagnostics"
+        :key="diagnostic.code"
+        class="role-diagnostic"
       >
-        <ElOption
-          v-for="field in fieldOptions"
-          :key="field.value"
-          :label="`${field.label} · ${field.kind} · ${field.detail}`"
-          :value="field.value"
-          :disabled="!field.numeric || field.value === categoryField"
-        />
-      </ElSelect>
-      <ElSelect v-else v-model="singleSeriesModel" clearable :aria-label="mappingRoles.series">
-        <ElOption
-          v-for="field in fieldOptions"
-          :key="field.value"
-          :label="`${field.label} · ${field.kind} · ${field.detail}`"
-          :value="field.value"
-          :disabled="!field.numeric || field.value === categoryField"
-        />
-      </ElSelect>
+        {{ diagnostic.message }}
+      </p>
     </div>
-    <ElAlert
-      v-if="mappingWarning"
-      :icon="Warning"
-      :title="mappingWarning"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
-    <div v-else-if="ready" class="mapping-ok">
+    <div class="control-group">
+      <label class="control-label">
+        数值 <em class="required-mark">必填</em>
+      </label>
+      <ElSelect v-model="valueModel" clearable aria-label="数值">
+        <ElOption
+          v-for="field in fields"
+          :key="field.id"
+          :label="fieldLabel(field)"
+          :value="field.id"
+          :disabled="valueFieldDisabled(field)"
+        />
+      </ElSelect>
+      <p v-if="valueFieldId === null" class="field-guidance">
+        仅可选择所有非缺失值均为数值的 Field。
+      </p>
+      <p
+        v-for="diagnostic in valueDiagnostics"
+        :key="diagnostic.code"
+        class="role-diagnostic"
+        :class="{ 'is-warning': diagnostic.severity === 'warning' }"
+      >
+        {{ diagnostic.message }}
+      </p>
+    </div>
+    <div v-if="ready" class="mapping-ok">
       <ElIcon><CircleCheck /></ElIcon>
-      映射有效 · {{ seriesFields.length }} 个 Series
+      映射有效 · 1 个 Series
     </div>
-    <ElAlert
-      v-else
-      title="请选择所有必填 Mapping Role"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
+    </template>
   </section>
 </template>
 
@@ -144,11 +157,23 @@ function primaryFieldDisabled(field: (typeof fieldOptions)[number]) {
   font-weight: 500;
 }
 
-.control-hint {
-  margin-left: auto;
-  color: var(--text-muted);
+.field-guidance,
+.role-diagnostic {
+  margin: 0;
   font-size: 9px;
-  font-weight: 400;
+  line-height: 1.45;
+}
+
+.field-guidance {
+  color: var(--text-muted);
+}
+
+.role-diagnostic {
+  color: #b42318;
+}
+
+.role-diagnostic.is-warning {
+  color: #94620a;
 }
 
 .mapping-ok {

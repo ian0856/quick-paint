@@ -1,9 +1,9 @@
-export type ChartType = 'bar' | 'line' | 'pie' | 'scatter'
+import type { ChartType, FieldId } from './chartComposition'
 
 export type WorkbenchComposition = {
-  chartType: ChartType
-  categoryField: string
-  seriesFields: string[]
+  chartType: ChartType | null
+  categoryFieldId: FieldId | null
+  valueFieldIds: FieldId[]
   title: string
   selectedColor: string
   showLegend: boolean
@@ -13,9 +13,9 @@ export type WorkbenchComposition = {
 }
 
 export const defaultComposition: WorkbenchComposition = {
-  chartType: 'bar',
-  categoryField: 'month',
-  seriesFields: ['east', 'south'],
+  chartType: null,
+  categoryFieldId: null,
+  valueFieldIds: [],
   title: '2026 上半年区域销售',
   selectedColor: '#2f6fed',
   showLegend: true,
@@ -23,3 +23,5 @@ export const defaultComposition: WorkbenchComposition = {
   width: 1600,
   height: 900,
 }
+
+export type { ChartType }

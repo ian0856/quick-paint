@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { FolderOpened, RefreshRight } from '@element-plus/icons-vue'
 import { ElButton, ElIcon, ElOption, ElSelect, ElTag } from 'element-plus'
-import { shallowRef } from 'vue'
+import type { WorksheetInterpretation } from '../chartComposition'
 
-defineProps<{ compositionReady: boolean }>()
+defineProps<{
+  worksheet: WorksheetInterpretation
+  compositionReady: boolean
+}>()
 
-const worksheet = shallowRef('区域销售')
-
-const fields = [
-  { name: '月份', kind: '文', detail: '文本 · 无缺失', tone: 'text' },
-  { name: '华东', kind: '数', detail: '数字 · 无缺失', tone: 'number' },
-  { name: '华南', kind: '数', detail: '数字 · 无缺失', tone: 'number' },
-  { name: '华西', kind: '数', detail: '数字 · 1 个缺失', tone: 'warning' },
-] as const
+const kindMarker = { text: '文', number: '数', date: '日', boolean: '布', mixed: '混' } as const
 </script>
 
 <template>
@@ -31,14 +27,13 @@ const fields = [
     </button>
 
     <label class="field-label" for="worksheet-select">Worksheet</label>
-    <ElSelect id="worksheet-select" v-model="worksheet" aria-label="Worksheet">
-      <ElOption label="区域销售" value="区域销售" />
-      <ElOption label="产品销售" value="产品销售" />
+    <ElSelect id="worksheet-select" :model-value="worksheet.name" aria-label="Worksheet">
+      <ElOption :label="worksheet.name" :value="worksheet.name" />
     </ElSelect>
 
     <div class="source-meta">
-      <span class="meta-item"><strong class="meta-value">6</strong> 条 Record</span>
-      <span class="meta-item"><strong class="meta-value">7</strong> 个 Field</span>
+      <span class="meta-item"><strong class="meta-value">{{ worksheet.recordCount }}</strong> 条 Record</span>
+      <span class="meta-item"><strong class="meta-value">{{ worksheet.fields.length }}</strong> 个 Field</span>
     </div>
 
     <ElButton class="replace-button" text>
@@ -67,14 +62,14 @@ const fields = [
 
     <div class="field-section-heading">
       <span class="section-label">Field Profile</span>
-      <small class="section-count">4 / 7</small>
+      <small class="section-count">{{ worksheet.fields.length }}</small>
     </div>
     <ul class="field-list">
-      <li v-for="field in fields" :key="field.name">
-        <i :class="`field-kind field-kind--${field.tone}`">{{ field.kind }}</i>
+      <li v-for="field in worksheet.fields" :key="field.id">
+        <i :class="`field-kind field-kind--${field.kind}`">{{ kindMarker[field.kind] }}</i>
         <span class="field-copy">
-          <strong class="field-name">{{ field.name }}</strong>
-          <small class="field-detail">{{ field.detail }}</small>
+          <strong class="field-name">{{ field.name }}（{{ field.sourceColumn }} 列）</strong>
+          <small class="field-detail">{{ field.profile.summary }}</small>
         </span>
       </li>
     </ul>
@@ -234,7 +229,9 @@ const fields = [
   font-weight: 700;
 }
 
-.field-kind--text {
+.field-kind--text,
+.field-kind--date,
+.field-kind--boolean {
   color: #3158a7;
   background: #edf3ff;
 }
@@ -244,7 +241,7 @@ const fields = [
   background: #eaf8f1;
 }
 
-.field-kind--warning {
+.field-kind--mixed {
   color: #94620a;
   background: #fff5dc;
 }

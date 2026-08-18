@@ -3,7 +3,7 @@ import { DataAnalysis, Histogram, PieChart, TrendCharts } from '@element-plus/ic
 import { ElIcon, ElRadioButton, ElRadioGroup } from 'element-plus'
 import type { ChartType } from '../../workbenchModel'
 
-defineProps<{ chartType: ChartType }>()
+defineProps<{ chartType: ChartType | null }>()
 
 const emit = defineEmits<{ change: [chartType: ChartType] }>()
 
@@ -19,7 +19,7 @@ const chartTypes = [
   <section class="inspector-section">
     <h2 class="section-title"><span class="section-number">01</span>图表类型</h2>
     <ElRadioGroup
-      :model-value="chartType"
+      :model-value="chartType ?? undefined"
       class="chart-types"
       aria-label="图表类型"
       @update:model-value="emit('change', $event as ChartType)"

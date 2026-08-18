@@ -12,8 +12,8 @@ defineProps<{ ready: boolean }>()
       <strong>Quick Paint</strong>
     </div>
     <div class="header-actions">
-      <span class="ready-status">
-        <i class="ready-dot" aria-hidden="true" />
+      <span class="ready-status" role="status" aria-live="polite">
+        <i class="ready-dot" :class="{ 'is-ready': ready }" aria-hidden="true" />
         {{ ready ? 'Chart Composition 已就绪' : '字段映射未完成' }}
       </span>
       <ElButton type="primary" :disabled="!ready">
@@ -80,6 +80,10 @@ defineProps<{ ready: boolean }>()
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  background: var(--warning);
+}
+
+.ready-dot.is-ready {
   background: var(--success);
 }
 </style>
