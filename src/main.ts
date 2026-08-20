@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
+import '@fontsource-variable/noto-sans-sc/index.css'
 import 'element-plus/dist/index.css'
-import './style.css'
+import 'virtual:uno.css'
 import App from './App.vue'
 import router from './router'
 
