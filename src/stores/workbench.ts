@@ -1,22 +1,29 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onScopeDispose, shallowRef } from 'vue'
 import {
+  applySourceTableChanges,
   categoryUnavailableReason,
   defaultValueFieldIds,
+  deleteSourceTableRows,
   downloadChart,
   exportBarChart,
   inferUniqueMapping,
+  insertSourceTableRow,
   LIMITS,
   parseFile,
   resolveBarChart,
   SERIES_COLORS,
+  validateSourceTable,
+  type BarChartModel,
   valueUnavailableReason,
   type DataSourceInterpretation,
   type FieldId,
   type ParseFailure,
   type ParseTask,
+  type SourceTableChange,
   type ValueFieldSelection,
   type ViewMode,
+  type WorksheetInterpretation,
 } from '../views/workbench/utils'
 
 type WorksheetMapping = {
@@ -37,21 +44,46 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   const isExporting = shallowRef(false)
   const exportError = shallowRef<string | null>(null)
   const exportSuccess = shallowRef(false)
+  const worksheetEdits = shallowRef<Map<string, WorksheetInterpretation>>(new Map())
   let activeTask: ParseTask | null = null
   let worksheetMappings = new Map<string, WorksheetMapping>()
+  let lastValidCharts = new Map<string, BarChartModel>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
-  const selectedWorksheet = computed(() =>
-    worksheets.value.find((worksheet) => worksheet.id === selectedWorksheetId.value && worksheet.valid) ?? null,
+  const selectedWorksheet = computed(() => {
+    const worksheet = worksheets.value.find(
+      item => item.id === selectedWorksheetId.value && item.valid,
+    )
+    return worksheet ? worksheetEdits.value.get(worksheet.id) ?? worksheet : null
+  })
+  const hasTableEdits = computed(() =>
+    selectedWorksheetId.value !== null && worksheetEdits.value.has(selectedWorksheetId.value),
   )
+  const sourceTableValidation = computed(() => {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet) return { valid: true, message: null, cellErrors: [] }
+    return validateSourceTable(
+      worksheet,
+      categoryFieldId.value,
+      valueFields.value.map(field => field.fieldId),
+    )
+  })
+  const hasInvalidTableEdits = computed(() => hasTableEdits.value && !sourceTableValidation.value.valid)
   const chartResolution = computed(() => {
     const worksheet = selectedWorksheet.value
     if (!worksheet) return null
     return resolveBarChart(worksheet, categoryFieldId.value, valueFields.value, title.value)
   })
-  const chart = computed(() => chartResolution.value?.valid ? chartResolution.value.chart : null)
+  const chart = computed(() => {
+    const resolution = chartResolution.value
+    if (resolution?.valid) return resolution.chart
+    if (!hasInvalidTableEdits.value || !selectedWorksheetId.value) return null
+    return lastValidCharts.get(selectedWorksheetId.value) ?? null
+  })
   const controlsDisabled = computed(() => isParsing.value || !selectedWorksheet.value)
-  const exportDisabled = computed(() => isParsing.value || isExporting.value || !chart.value)
+  const exportDisabled = computed(() =>
+    isParsing.value || isExporting.value || chartResolution.value?.valid !== true,
+  )
 
   async function importFile(file: File) {
     activeTask?.cancel()
@@ -67,6 +99,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       if (activeTask !== task) return
       dataSource.value = result
       worksheetMappings = new Map()
+      worksheetEdits.value = new Map()
+      lastValidCharts = new Map()
       const firstValid = result.worksheets.find((worksheet) => worksheet.valid) ?? null
       selectWorksheet(firstValid?.id ?? null)
     }
@@ -111,15 +145,17 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     viewMode.value = 'chart'
     exportError.value = null
     exportSuccess.value = false
+    rememberValidChart()
   }
 
   async function exportChart() {
-    if (!chart.value || isExporting.value) return
+    const resolution = chartResolution.value
+    if (!resolution?.valid || isExporting.value) return
     isExporting.value = true
     exportError.value = null
     exportSuccess.value = false
     try {
-      const output = await exportBarChart(chart.value)
+      const output = await exportBarChart(resolution.chart)
       downloadChart(output)
       exportSuccess.value = true
       window.setTimeout(() => { exportSuccess.value = false }, 2400)
@@ -189,6 +225,26 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     title.value = nextTitle
     exportError.value = null
     exportSuccess.value = false
+    rememberValidChart()
+  }
+
+  function updateSourceTable(changes: readonly SourceTableChange[]) {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet) return
+    saveWorksheetEdit(applySourceTableChanges(worksheet, changes))
+  }
+
+  function insertSourceTableRecord() {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet) return
+    saveWorksheetEdit(insertSourceTableRow(worksheet))
+  }
+
+  function deleteSourceTableRecords(rowIndexes: readonly number[]) {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet) return
+    const updated = deleteSourceTableRows(worksheet, rowIndexes)
+    if (updated !== worksheet) saveWorksheetEdit(updated)
   }
 
   function changeView(mode: ViewMode) {
@@ -208,6 +264,22 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     saveWorksheetMapping()
     exportError.value = null
     exportSuccess.value = false
+    rememberValidChart()
+  }
+
+  function saveWorksheetEdit(worksheet: WorksheetInterpretation) {
+    const edits = new Map(worksheetEdits.value)
+    edits.set(worksheet.id, worksheet)
+    worksheetEdits.value = edits
+    exportError.value = null
+    exportSuccess.value = false
+    rememberValidChart()
+  }
+
+  function rememberValidChart() {
+    const worksheetId = selectedWorksheetId.value
+    const resolution = chartResolution.value
+    if (worksheetId && resolution?.valid) lastValidCharts.set(worksheetId, resolution.chart)
   }
 
   onScopeDispose(() => activeTask?.cancel())
@@ -229,6 +301,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     exportSuccess,
     chartResolution,
     chart,
+    sourceTableValidation,
+    hasInvalidTableEdits,
     controlsDisabled,
     exportDisabled,
     importFile,
@@ -239,6 +313,9 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     selectValueFields,
     reorderValueFields,
     updateTitle,
+    updateSourceTable,
+    insertSourceTableRecord,
+    deleteSourceTableRecords,
     changeView,
   }
 })

@@ -5,7 +5,7 @@ import WorkbenchStage from './_components/WorkbenchStage.vue'
 </script>
 
 <template>
-  <div class="h-screen min-h-0 min-w-0 w-full flex overflow-hidden">
+  <div class="h-screen min-h-0 min-w-0 w-full flex flex-col overflow-hidden sm:flex-row">
     <WorkbenchSidebar />
     <div class="min-h-0 min-w-0 flex flex-1 flex-col">
       <WorkbenchHeader />

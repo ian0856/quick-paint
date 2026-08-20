@@ -14,6 +14,8 @@ const {
   viewMode,
   chartResolution,
   chart,
+  sourceTableValidation,
+  hasInvalidTableEdits,
   isParsing,
   parseFailure,
   replacementFailure,
@@ -49,7 +51,21 @@ const diagnostic = computed(() => {
       <span class="text-xs">{{ parseFailure.recovery }}</span>
     </div>
     <template v-else-if="worksheet">
-      <SourceTableView v-if="viewMode === 'table'" :worksheet="worksheet" />
+      <SourceTableView
+        v-if="viewMode === 'table'"
+        :worksheet="worksheet"
+        :cell-errors="sourceTableValidation.cellErrors"
+        :validation-message="hasInvalidTableEdits ? sourceTableValidation.message : null"
+        @change="store.updateSourceTable"
+        @insert-row="store.insertSourceTableRecord"
+        @delete-rows="store.deleteSourceTableRecords"
+      />
+      <div v-else-if="chart && hasInvalidTableEdits" class="h-full min-h-0 grid grid-rows-[42px_minmax(0,1fr)]">
+        <div class="flex items-center justify-center border-b border-[#f1b8b8] bg-[#fff7f7] px-5 text-xs text-danger" role="alert">
+          {{ sourceTableValidation.message }} 图表保留最后一次有效结果，修正后将自动恢复。
+        </div>
+        <BarChartView :chart="chart" />
+      </div>
       <BarChartView v-else-if="chart" :chart="chart" />
       <div v-else class="status-center" role="status">
         <strong class="text-sm text-text-strong">{{ diagnostic?.message }}</strong>

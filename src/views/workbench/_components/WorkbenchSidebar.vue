@@ -68,7 +68,7 @@ function removeValueField(id: FieldId) {
 </script>
 
 <template>
-  <aside class="h-screen w-70 flex flex-none flex-col overflow-auto border-r border-base bg-base px-5 pb-4.5 pt-5.5" aria-label="工作台控制">
+  <aside class="h-[42vh] w-full flex flex-none flex-col overflow-auto border-b border-base bg-base px-5 pb-4.5 pt-5.5 sm:h-screen sm:w-70 sm:border-b-0 sm:border-r" aria-label="工作台控制">
     <div class="min-h-8.5 flex items-center gap-2.5 text-[15px] text-text-strong">
       <span class="h-8 w-8 grid place-items-center rounded-1.5 bg-primary text-white" aria-hidden="true"><ElIcon><Histogram /></ElIcon></span>
       <strong>Quick Paint</strong>

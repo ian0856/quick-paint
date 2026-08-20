@@ -1,88 +1,178 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef } from 'vue'
-import type { WorksheetInterpretation } from '../utils'
+import { Delete, Plus } from '@element-plus/icons-vue'
+import VGrid from '@revolist/vue3-datagrid'
+import type {
+  AfterEditEvent,
+  ColumnRegular,
+  DataType,
+  FocusAfterRenderEvent,
+  RevoGridCustomEvent,
+} from '@revolist/vue3-datagrid'
+import { ElButton, ElIcon } from 'element-plus'
+import { computed, shallowRef, watch } from 'vue'
+import type {
+  FieldId,
+  SourceTableCellError,
+  SourceTableChange,
+  WorksheetInterpretation,
+} from '../utils'
 
-const props = defineProps<{ worksheet: WorksheetInterpretation }>()
-const scroller = useTemplateRef<HTMLDivElement>('scroller')
-const scrollTop = shallowRef(0)
-const viewportHeight = shallowRef(600)
-const rowHeight = 38
-const overscan = 8
-let resizeObserver: ResizeObserver | null = null
+type GridRow = Record<string, string | number> & { __rowIndex: number }
 
-const tableWidth = computed(() => 58 + props.worksheet.fields.length * 180)
-const startIndex = computed(() => Math.max(0, Math.floor(scrollTop.value / rowHeight) - overscan))
-const visibleCount = computed(() => Math.ceil(viewportHeight.value / rowHeight) + overscan * 2)
-const endIndex = computed(() => Math.min(props.worksheet.recordCount, startIndex.value + visibleCount.value))
-const visibleRows = computed(() =>
-  Array.from({ length: Math.max(0, endIndex.value - startIndex.value) }, (_, offset) => startIndex.value + offset),
+const props = defineProps<{
+  worksheet: WorksheetInterpretation
+  cellErrors: SourceTableCellError[]
+  validationMessage: string | null
+}>()
+const emit = defineEmits<{
+  change: [changes: SourceTableChange[]]
+  insertRow: []
+  deleteRows: [rowIndexes: number[]]
+}>()
+
+const selectedRowIndexes = shallowRef<number[]>([])
+const gridElement = shallowRef<HTMLRevoGridElement | null>(null)
+const selectedRowCount = computed(() => selectedRowIndexes.value.length)
+const fieldProp = (fieldId: FieldId) => `field_${fieldId}`
+const fieldByProp = computed(() => new Map(
+  props.worksheet.fields.map(field => [fieldProp(field.id), field]),
+))
+const errorsByCell = computed(() => new Map(
+  props.cellErrors.map(error => [`${error.rowIndex}:${error.fieldId}`, error.message]),
+))
+const source = computed<GridRow[]>(() => Array.from(
+  { length: props.worksheet.recordCount },
+  (_, rowIndex) => Object.fromEntries([
+    ['__rowIndex', rowIndex],
+    ...props.worksheet.fields.map(field => [fieldProp(field.id), field.values[rowIndex]?.display ?? '']),
+  ]) as GridRow,
+))
+const columns = computed<ColumnRegular[]>(() =>
+  props.worksheet.fields.map(field => ({
+    prop: fieldProp(field.id),
+    name: field.label,
+    size: 180,
+    minSize: 110,
+    sortable: false,
+    cellProperties: ({ rowIndex }) => {
+      const error = errorsByCell.value.get(`${rowIndex}:${field.id}`)
+      if (!error) return { title: field.values[rowIndex]?.display || '（空白）' }
+      return {
+        title: error,
+        'aria-invalid': 'true',
+        'aria-label': error,
+        style: {
+          backgroundColor: '#fff1f1',
+          boxShadow: 'inset 0 0 0 1px #c83b3b',
+          color: '#a72e2e',
+        },
+      }
+    },
+  })),
 )
 
-function onScroll(event: Event) {
-  scrollTop.value = (event.currentTarget as HTMLElement).scrollTop
+watch(() => [props.worksheet.id, props.worksheet.recordCount], () => {
+  selectedRowIndexes.value = []
+})
+
+function onAfterEdit(event: RevoGridCustomEvent<AfterEditEvent>) {
+  const detail = event.detail
+  if ('prop' in detail) {
+    const field = fieldByProp.value.get(String(detail.prop))
+    if (field) emit('change', [{ rowIndex: detail.rowIndex, fieldId: field.id, value: detail.val }])
+    return
+  }
+
+  const changes: SourceTableChange[] = []
+  for (const [rowIndexText, row] of Object.entries(detail.data)) {
+    const rowIndex = Number(rowIndexText)
+    for (const [prop, field] of fieldByProp.value) {
+      if (Object.hasOwn(row, prop)) changes.push({ rowIndex, fieldId: field.id, value: row[prop] })
+    }
+  }
+  if (changes.length > 0) emit('change', changes)
 }
 
-onMounted(() => {
-  if (!scroller.value) return
-  viewportHeight.value = scroller.value.clientHeight
-  resizeObserver = new ResizeObserver(([entry]) => {
-    if (entry) viewportHeight.value = entry.contentRect.height
-  })
-  resizeObserver.observe(scroller.value)
-})
-onBeforeUnmount(() => resizeObserver?.disconnect())
+async function onAfterFocus(event: RevoGridCustomEvent<FocusAfterRenderEvent<DataType>>) {
+  gridElement.value = event.currentTarget as HTMLRevoGridElement
+  const rowIndex = event.detail.rowIndex
+  if (!selectedRowIndexes.value.includes(rowIndex)) selectedRowIndexes.value = [rowIndex]
+  await syncSelectedRows()
+}
+
+async function onGridInteraction(event: Event) {
+  gridElement.value = event.currentTarget as HTMLRevoGridElement
+  await syncSelectedRows()
+}
+
+async function syncSelectedRows() {
+  const grid = gridElement.value
+  if (!grid || typeof grid.getSelectedRange !== 'function') return
+  const range = await grid.getSelectedRange()
+  if (!range) return
+  const { y, y1 } = range
+  const start = Math.min(y, y1)
+  const end = Math.max(y, y1)
+  selectedRowIndexes.value = Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
+}
+
+async function deleteSelectedRows() {
+  await syncSelectedRows()
+  if (selectedRowIndexes.value.length === 0) return
+  emit('deleteRows', selectedRowIndexes.value.slice())
+  selectedRowIndexes.value = []
+}
 </script>
 
 <template>
-  <section class="h-full min-h-0 min-w-0 w-full grid grid-rows-[52px_minmax(0,1fr)] bg-base" aria-label="数据表格">
-    <header class="flex items-center justify-between border-b border-base px-5">
-      <strong class="text-[13px] text-text-strong">{{ worksheet.name }}</strong>
-      <span class="text-caption">{{ worksheet.recordCount.toLocaleString('zh-CN') }} 行 · {{ worksheet.fields.length }} 列</span>
-    </header>
-    <div
-      ref="scroller"
-      class="relative min-h-0 min-w-0 overflow-auto"
-      role="table"
-      aria-label="数据表格"
-      :aria-rowcount="worksheet.recordCount + 1"
-      @scroll="onScroll"
-    >
-      <div class="min-w-full" :style="{ width: `${tableWidth}px` }">
-        <div class="sticky z-2 top-0 h-12 flex border-b border-border-strong bg-[#f7f8fa]" role="row" :style="{ width: `${tableWidth}px` }">
-          <div class="table-cell w-14.5 justify-end bg-[#fafbfc] text-muted tabular-nums select-none flex-col items-start justify-center text-[11px] text-text-strong" role="columnheader">行</div>
-          <div
-            v-for="field in worksheet.fields"
-            :key="field.id"
-            class="table-cell w-45 flex-col items-start justify-center text-[11px] text-text-strong"
-            role="columnheader"
-            :title="`${field.label} · ${field.sourceColumn} 列`"
-          >
-            <strong>{{ field.label }}</strong>
-            <span class="text-[9px] font-400 text-muted">{{ field.sourceColumn }} 列</span>
-          </div>
-        </div>
-        <div class="relative" :style="{ height: `${worksheet.recordCount * rowHeight}px` }">
-          <div
-            v-for="rowIndex in visibleRows"
-            :key="rowIndex"
-            class="absolute left-0 h-9.5 flex border-b border-base bg-base hover:bg-[#f8faff]"
-            role="row"
-            :aria-rowindex="rowIndex + 2"
-            :style="{ top: `${rowIndex * rowHeight}px`, width: `${tableWidth}px` }"
-          >
-            <div class="table-cell w-14.5 justify-end bg-[#fafbfc] text-muted tabular-nums select-none" role="rowheader">{{ rowIndex + 2 }}</div>
-            <div
-              v-for="field in worksheet.fields"
-              :key="field.id"
-              class="table-cell w-45"
-              role="cell"
-              :title="field.values[rowIndex]?.display || '（空白）'"
-            >
-              {{ field.values[rowIndex]?.display || '（空白）' }}
-            </div>
-          </div>
-        </div>
+  <section class="h-full min-h-0 min-w-0 w-full grid grid-rows-[58px_minmax(0,1fr)] bg-base" aria-label="数据表格">
+    <header class="min-w-0 flex items-center justify-between gap-4 border-b border-base px-5">
+      <div class="min-w-0 flex items-center gap-3">
+        <strong class="max-w-52 truncate text-[13px] text-text-strong" :title="worksheet.name">{{ worksheet.name }}</strong>
+        <span class="text-caption">{{ worksheet.recordCount.toLocaleString('zh-CN') }} 行 · {{ worksheet.fields.length }} 列</span>
+        <span v-if="validationMessage" class="max-w-92 truncate text-[11px] text-danger" :title="validationMessage" role="alert">
+          {{ validationMessage }}
+        </span>
       </div>
-    </div>
+      <div class="flex flex-none items-center gap-2" aria-label="表格行操作">
+        <ElButton size="small" @click="emit('insertRow')">
+          <ElIcon><Plus /></ElIcon>
+          新增行
+        </ElButton>
+        <ElButton size="small" :disabled="selectedRowCount === 0" @click="deleteSelectedRows">
+          <ElIcon><Delete /></ElIcon>
+          {{ selectedRowCount > 1 ? `删除 ${selectedRowCount} 行` : '删除行' }}
+        </ElButton>
+      </div>
+    </header>
+    <VGrid
+      class="source-grid min-h-0 min-w-0"
+      :source="source"
+      :columns="columns"
+      :row-headers="true"
+      :range="true"
+      :use-clipboard="true"
+      :resize="true"
+      :can-move-columns="false"
+      :accessible="true"
+      aria-label="数据表格"
+      @afteredit="onAfterEdit"
+      @afterfocus="onAfterFocus"
+      @keyup="onGridInteraction"
+      @mouseup="onGridInteraction"
+    />
   </section>
 </template>
+
+<style scoped>
+.source-grid {
+  display: block;
+  height: 100%;
+  width: 100%;
+  --rg-header-background: #f7f8fa;
+  --rg-header-color: #172033;
+  --rg-border-color: #e5e8ee;
+  --rg-selection-border-color: #2f6fed;
+  --rg-selection-background-color: rgb(47 111 237 / 8%);
+}
+</style>

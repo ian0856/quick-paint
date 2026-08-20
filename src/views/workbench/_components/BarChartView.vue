@@ -27,6 +27,22 @@ onBeforeUnmount(() => chartInstance?.destroy())
         role="img"
         :aria-label="`柱状图：${chart.title}，共 ${chart.labels.length} 条数据，${chart.series.length} 个数值系列`"
       />
+      <table class="sr-only" aria-label="柱状图数据">
+        <thead>
+          <tr>
+            <th scope="col">分类</th>
+            <th v-for="series in chart.series" :key="series.fieldId" scope="col">{{ series.fieldName }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(label, rowIndex) in chart.labels" :key="rowIndex">
+            <th scope="row">{{ label }}</th>
+            <td v-for="series in chart.series" :key="series.fieldId">
+              {{ series.values[rowIndex] ?? '（空白）' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 </template>

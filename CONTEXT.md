@@ -13,7 +13,7 @@ A visible sheet within an `.xlsx` Data Source, or the single table represented b
 _Avoid_: Tab, page
 
 **Source Table**:
-The single continuous rectangular table parsed from the selected Worksheet and presented to the user. In the current product scope it is displayed without editing.
+The single continuous rectangular table parsed from the selected Worksheet and presented for inspection and session-only correction before producing a Bar Chart.
 _Avoid_: Spreadsheet, data preview
 
 **Source Value**:

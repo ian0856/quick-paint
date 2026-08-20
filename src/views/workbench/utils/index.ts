@@ -11,4 +11,16 @@ export type { ChartExport } from './chartExporter'
 export { LIMITS } from './model'
 export { parseFile } from './parseClient'
 export type { ParseTask } from './parseClient'
+export {
+  applySourceTableChanges,
+  deleteSourceTableRow,
+  deleteSourceTableRows,
+  insertSourceTableRow,
+  validateSourceTable,
+} from './sourceTable'
+export type {
+  SourceTableCellError,
+  SourceTableChange,
+  SourceTableValidation,
+} from './sourceTable'
 export type * from './model'
