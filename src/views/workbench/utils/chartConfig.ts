@@ -1,7 +1,8 @@
 import type { ChartConfiguration, Plugin } from 'chart.js'
-import type { BarChartModel } from './utils'
+import type { BarChartModel } from './model'
 
-export const CHART_BLUE = '#2563eb'
+export const SERIES_COLORS = ['#2563eb', '#d97706', '#059669', '#dc2626', '#7c3aed'] as const
+export const CHART_BLUE = SERIES_COLORS[0]
 export const CHART_FONT = 'Noto Sans SC Variable'
 
 const whiteBackground: Plugin<'bar'> = {
@@ -24,15 +25,15 @@ export function createBarChartConfig(
     type: 'bar',
     data: {
       labels: model.labels,
-      datasets: [{
-        label: model.valueFieldName,
-        data: model.values,
-        backgroundColor: CHART_BLUE,
-        borderColor: CHART_BLUE,
+      datasets: model.series.map((series) => ({
+        label: series.fieldName,
+        data: series.values,
+        backgroundColor: series.color,
+        borderColor: series.color,
         borderWidth: 0,
         borderRadius: 3,
         maxBarThickness: 56,
-      }],
+      })),
     },
     plugins: options.forExport ? [whiteBackground] : [],
     options: {
@@ -43,7 +44,17 @@ export function createBarChartConfig(
       layout: { padding: options.forExport ? { top: 18, right: 28, bottom: 18, left: 16 } : 8 },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: options.forExport ? 20 : 12,
+            boxHeight: options.forExport ? 12 : 8,
+            color: '#344054',
+            font: { family: CHART_FONT, size: options.forExport ? 14 : 11 },
+            padding: options.forExport ? 22 : 14,
+          },
+        },
         title: {
           display: true,
           text: model.title,
@@ -52,7 +63,7 @@ export function createBarChartConfig(
           padding: { bottom: options.forExport ? 26 : 18 },
         },
         tooltip: {
-          displayColors: false,
+          displayColors: true,
           titleFont: { family: CHART_FONT },
           bodyFont: { family: CHART_FONT },
         },

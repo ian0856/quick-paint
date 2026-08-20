@@ -4,6 +4,7 @@ import type {
   FieldId,
   SourceCell,
   SourceField,
+  ValueFieldSelection,
   WorksheetInterpretation,
 } from './model'
 import { LIMITS } from './model'
@@ -24,8 +25,8 @@ export function numericCellValue(cell: SourceCell): number | null {
   return Number.isFinite(value) ? value : null
 }
 
-export function categoryUnavailableReason(field: SourceField, valueFieldId: FieldId | null) {
-  if (field.id === valueFieldId) return '同一字段不能同时用作分类和值'
+export function categoryUnavailableReason(field: SourceField, valueFieldIds: readonly FieldId[]) {
+  if (valueFieldIds.includes(field.id)) return '同一字段不能同时用作分类和值'
   if (field.profile.errorCount > 0) return '包含错误或没有保存结果的公式'
   if (field.values.every((cell) => cell.kind === 'missing')) return '该字段全部为空'
   return null
@@ -37,25 +38,30 @@ export function valueUnavailableReason(field: SourceField, categoryFieldId: Fiel
   return null
 }
 
-export function inferUniqueMapping(worksheet: WorksheetInterpretation) {
-  const valueFields = worksheet.fields.filter((field) => field.profile.numericRoleEligible)
-  const categoryFields = worksheet.fields.filter(
-    (field) =>
-      !field.profile.numericRoleEligible &&
-      field.profile.errorCount === 0 &&
-      field.values.some((cell) => cell.kind !== 'missing' && cell.kind !== 'error'),
-  )
+export function defaultValueFieldIds(
+  worksheet: WorksheetInterpretation,
+  categoryFieldId: FieldId | null,
+) {
+  if (categoryFieldId === null) return []
+  return worksheet.fields
+    .filter((field) => !valueUnavailableReason(field, categoryFieldId))
+    .slice(0, LIMITS.chartValueFields)
+    .map((field) => field.id)
+}
 
-  if (categoryFields.length !== 1 || valueFields.length !== 1) {
-    return { categoryFieldId: null, valueFieldId: null }
+export function inferUniqueMapping(worksheet: WorksheetInterpretation) {
+  const categoryFieldId = worksheet.fields[0]?.id ?? null
+
+  return {
+    categoryFieldId,
+    valueFieldIds: defaultValueFieldIds(worksheet, categoryFieldId),
   }
-  return { categoryFieldId: categoryFields[0]!.id, valueFieldId: valueFields[0]!.id }
 }
 
 export function resolveBarChart(
   worksheet: WorksheetInterpretation,
   categoryFieldId: FieldId | null,
-  valueFieldId: FieldId | null,
+  valueFields: readonly ValueFieldSelection[],
   title: string,
 ): ChartResolution {
   if (worksheet.recordCount > LIMITS.chartRecords) {
@@ -68,21 +74,33 @@ export function resolveBarChart(
       },
     }
   }
-  if (categoryFieldId === null || valueFieldId === null) {
+  if (categoryFieldId === null) {
     return {
       valid: false,
       chart: null,
-      diagnostic: { code: 'mapping-required', message: '请选择分类字段和数值字段。' },
+      diagnostic: { code: 'mapping-required', message: '请选择分类字段。' },
+    }
+  }
+  if (valueFields.length === 0) {
+    return {
+      valid: false,
+      chart: null,
+      diagnostic: { code: 'mapping-required', message: '请选择至少一个数值字段。' },
     }
   }
 
   const categoryField = worksheet.fields.find((field) => field.id === categoryFieldId)
-  const valueField = worksheet.fields.find((field) => field.id === valueFieldId)
+  const valueFieldIds = valueFields.map((field) => field.fieldId)
+  const selectedFields = valueFields.map((selection) => ({
+    selection,
+    field: worksheet.fields.find((field) => field.id === selection.fieldId),
+  }))
   if (
     !categoryField ||
-    !valueField ||
-    categoryUnavailableReason(categoryField, valueFieldId) ||
-    valueUnavailableReason(valueField, categoryFieldId)
+    valueFields.length > LIMITS.chartValueFields ||
+    new Set(valueFieldIds).size !== valueFieldIds.length ||
+    categoryUnavailableReason(categoryField, valueFieldIds) ||
+    selectedFields.some(({ field }) => !field || valueUnavailableReason(field, categoryFieldId))
   ) {
     return {
       valid: false,
@@ -91,8 +109,12 @@ export function resolveBarChart(
     }
   }
 
-  const values = valueField.values.map(numericCellValue)
-  if (values.every((value) => value === null)) {
+  const series = selectedFields.map(({ selection, field }) => ({
+    ...selection,
+    fieldName: field!.label,
+    values: field!.values.map(numericCellValue),
+  }))
+  if (series.every((item) => item.values.every((value) => value === null))) {
     return {
       valid: false,
       chart: null,
@@ -103,10 +125,8 @@ export function resolveBarChart(
   const chart: BarChartModel = {
     title: title.trim() || '未命名图表',
     categoryFieldId,
-    valueFieldId,
-    valueFieldName: valueField.name,
     labels: categoryField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
-    values,
+    series,
   }
   return { valid: true, chart, diagnostic: null }
 }

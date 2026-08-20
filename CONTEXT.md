@@ -21,11 +21,11 @@ The value read from one Data Source cell before Quick Paint determines whether i
 _Avoid_: Parsed value, normalized value
 
 **Field**:
-A named column in the Source Table. A Field can be selected as the Category Field or Value Field.
+A named column in the Source Table. A Field can be selected as the Category Field or one of the Value Fields.
 _Avoid_: Attribute, dimension, measure
 
 **Record**:
-A row in the Source Table that contributes at most one category-value pair to the Bar Chart.
+A row in the Source Table that contributes one category and up to one value per selected Value Field to the Bar Chart.
 _Avoid_: Entry, item
 
 **Category Field**:
@@ -33,11 +33,15 @@ The Field whose values label the horizontal positions in the Bar Chart.
 _Avoid_: X-axis field, label column
 
 **Value Field**:
-The numeric Field whose values determine bar heights in the Bar Chart.
+A numeric Field selected for the Bar Chart. Up to five Value Fields can be selected, and each produces one Value Series.
 _Avoid_: Y-axis field, metric column
 
+**Value Series**:
+The ordered set of bar heights derived from one selected Value Field. Its position within each category group, legend, and tooltip follows the user-defined Value Field order.
+_Avoid_: Dataset, metric
+
 **Bar Chart**:
-The single chart produced from one Category Field and one Value Field while preserving Source Table record order.
+The single grouped chart produced from one Category Field and up to five ordered Value Fields while preserving Source Table record order.
 _Avoid_: Chart Composition, visualization
 
 **Chart Image**:

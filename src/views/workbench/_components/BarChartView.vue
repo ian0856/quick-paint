@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Chart } from 'chart.js/auto'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
-import { createBarChartConfig } from '../chartConfig'
-import type { BarChartModel } from '../utils'
+import { createBarChartConfig, type BarChartModel } from '../utils'
 
 const props = defineProps<{ chart: BarChartModel }>()
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
@@ -26,7 +25,7 @@ onBeforeUnmount(() => chartInstance?.destroy())
       <canvas
         ref="canvas"
         role="img"
-        :aria-label="`柱状图：${chart.title}，共 ${chart.labels.length} 条数据`"
+        :aria-label="`柱状图：${chart.title}，共 ${chart.labels.length} 条数据，${chart.series.length} 个数值系列`"
       />
     </div>
   </section>

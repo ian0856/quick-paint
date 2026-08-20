@@ -65,13 +65,21 @@ export type ParseFailure = {
 
 export type ViewMode = 'chart' | 'table'
 
+export type ValueFieldSelection = {
+  fieldId: FieldId
+  color: string
+}
+
+export type ValueSeries = ValueFieldSelection & {
+  fieldName: string
+  values: Array<number | null>
+}
+
 export type BarChartModel = {
   title: string
   categoryFieldId: FieldId
-  valueFieldId: FieldId
-  valueFieldName: string
   labels: string[]
-  values: Array<number | null>
+  series: ValueSeries[]
 }
 
 export type ChartDiagnostic = {
@@ -90,5 +98,6 @@ export const LIMITS = {
   worksheetFields: 200,
   worksheetCells: 1_000_000,
   chartRecords: 100,
+  chartValueFields: 5,
   sourceValueCharacters: 32_767,
 } as const

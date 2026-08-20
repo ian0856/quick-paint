@@ -1,6 +1,6 @@
 import { Chart } from 'chart.js/auto'
 import { CHART_FONT, createBarChartConfig } from './chartConfig'
-import type { BarChartModel } from './utils'
+import type { BarChartModel } from './model'
 
 export type ChartExport = { blob: Blob; fileName: string }
 

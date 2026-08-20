@@ -1,21 +1,34 @@
-import { computed, onUnmounted, shallowRef } from 'vue'
-import { downloadChart, exportBarChart } from './chartExporter'
+import { acceptHMRUpdate, defineStore } from 'pinia'
+import { computed, onScopeDispose, shallowRef } from 'vue'
 import {
+  categoryUnavailableReason,
+  defaultValueFieldIds,
+  downloadChart,
+  exportBarChart,
   inferUniqueMapping,
+  LIMITS,
   parseFile,
   resolveBarChart,
+  SERIES_COLORS,
+  valueUnavailableReason,
   type DataSourceInterpretation,
   type FieldId,
   type ParseFailure,
   type ParseTask,
+  type ValueFieldSelection,
   type ViewMode,
-} from './utils'
+} from '../views/workbench/utils'
 
-export function useWorkbench() {
+type WorksheetMapping = {
+  categoryFieldId: FieldId | null
+  valueFields: ValueFieldSelection[]
+}
+
+export const useWorkbenchStore = defineStore('workbench', () => {
   const dataSource = shallowRef<DataSourceInterpretation | null>(null)
   const selectedWorksheetId = shallowRef<string | null>(null)
   const categoryFieldId = shallowRef<FieldId | null>(null)
-  const valueFieldId = shallowRef<FieldId | null>(null)
+  const valueFields = shallowRef<ValueFieldSelection[]>([])
   const title = shallowRef('')
   const viewMode = shallowRef<ViewMode>('chart')
   const isParsing = shallowRef(false)
@@ -25,6 +38,7 @@ export function useWorkbench() {
   const exportError = shallowRef<string | null>(null)
   const exportSuccess = shallowRef(false)
   let activeTask: ParseTask | null = null
+  let worksheetMappings = new Map<string, WorksheetMapping>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
   const selectedWorksheet = computed(() =>
@@ -33,7 +47,7 @@ export function useWorkbench() {
   const chartResolution = computed(() => {
     const worksheet = selectedWorksheet.value
     if (!worksheet) return null
-    return resolveBarChart(worksheet, categoryFieldId.value, valueFieldId.value, title.value)
+    return resolveBarChart(worksheet, categoryFieldId.value, valueFields.value, title.value)
   })
   const chart = computed(() => chartResolution.value?.valid ? chartResolution.value.chart : null)
   const controlsDisabled = computed(() => isParsing.value || !selectedWorksheet.value)
@@ -52,6 +66,7 @@ export function useWorkbench() {
       const result = await task.promise
       if (activeTask !== task) return
       dataSource.value = result
+      worksheetMappings = new Map()
       const firstValid = result.worksheets.find((worksheet) => worksheet.valid) ?? null
       selectWorksheet(firstValid?.id ?? null)
     }
@@ -74,13 +89,24 @@ export function useWorkbench() {
     const worksheet = worksheets.value.find((item) => item.id === id && item.valid)
     if (!worksheet) {
       categoryFieldId.value = null
-      valueFieldId.value = null
+      valueFields.value = []
       title.value = ''
       return
     }
-    const mapping = inferUniqueMapping(worksheet)
-    categoryFieldId.value = mapping.categoryFieldId
-    valueFieldId.value = mapping.valueFieldId
+    const savedMapping = worksheetMappings.get(worksheet.id)
+    if (savedMapping) {
+      categoryFieldId.value = savedMapping.categoryFieldId
+      valueFields.value = savedMapping.valueFields.map((field) => ({ ...field }))
+    }
+    else {
+      const mapping = inferUniqueMapping(worksheet)
+      categoryFieldId.value = mapping.categoryFieldId
+      valueFields.value = mapping.valueFieldIds.map((fieldId, index) => ({
+        fieldId,
+        color: SERIES_COLORS[index]!,
+      }))
+      saveWorksheetMapping()
+    }
     title.value = worksheet.name
     viewMode.value = 'chart'
     exportError.value = null
@@ -111,15 +137,52 @@ export function useWorkbench() {
   }
 
   function selectCategoryField(id: FieldId | null) {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet) return
+    if (id !== null) {
+      const field = worksheet.fields.find((item) => item.id === id)
+      if (!field || categoryUnavailableReason(field, [])) return
+    }
+
     categoryFieldId.value = id
-    exportError.value = null
-    exportSuccess.value = false
+    valueFields.value = defaultValueFieldIds(worksheet, id).map((fieldId, index) => ({
+      fieldId,
+      color: SERIES_COLORS[index]!,
+    }))
+    finishChartChange()
   }
 
-  function selectValueField(id: FieldId | null) {
-    valueFieldId.value = id
-    exportError.value = null
-    exportSuccess.value = false
+  function selectValueFields(ids: FieldId[]) {
+    const worksheet = selectedWorksheet.value
+    if (!worksheet || categoryFieldId.value === null) return
+
+    const requestedIds = [...new Set(ids)].filter((id) => {
+      const field = worksheet.fields.find((item) => item.id === id)
+      return field && !valueUnavailableReason(field, categoryFieldId.value)
+    })
+    const requested = new Set(requestedIds)
+    const retained = valueFields.value.filter((field) => requested.has(field.fieldId))
+    const retainedIds = new Set(retained.map((field) => field.fieldId))
+    const next = retained.slice()
+
+    for (const fieldId of requestedIds) {
+      if (next.length >= LIMITS.chartValueFields) break
+      if (retainedIds.has(fieldId)) continue
+      const usedColors = new Set(next.map((field) => field.color))
+      const color = SERIES_COLORS.find((candidate) => !usedColors.has(candidate))
+      if (color) next.push({ fieldId, color })
+    }
+
+    valueFields.value = next
+    finishChartChange()
+  }
+
+  function reorderValueFields(ids: FieldId[]) {
+    if (ids.length !== valueFields.value.length) return
+    const byId = new Map(valueFields.value.map((field) => [field.fieldId, field]))
+    if (new Set(ids).size !== ids.length || ids.some((id) => !byId.has(id))) return
+    valueFields.value = ids.map((id) => byId.get(id)!)
+    finishChartChange()
   }
 
   function updateTitle(nextTitle: string) {
@@ -133,7 +196,21 @@ export function useWorkbench() {
     viewMode.value = mode
   }
 
-  onUnmounted(() => activeTask?.cancel())
+  function saveWorksheetMapping() {
+    if (!selectedWorksheetId.value) return
+    worksheetMappings.set(selectedWorksheetId.value, {
+      categoryFieldId: categoryFieldId.value,
+      valueFields: valueFields.value.map((field) => ({ ...field })),
+    })
+  }
+
+  function finishChartChange() {
+    saveWorksheetMapping()
+    exportError.value = null
+    exportSuccess.value = false
+  }
+
+  onScopeDispose(() => activeTask?.cancel())
 
   return {
     dataSource,
@@ -141,7 +218,7 @@ export function useWorkbench() {
     selectedWorksheet,
     selectedWorksheetId,
     categoryFieldId,
-    valueFieldId,
+    valueFields,
     title,
     viewMode,
     isParsing,
@@ -159,8 +236,12 @@ export function useWorkbench() {
     exportChart,
     dismissReplacementFailure,
     selectCategoryField,
-    selectValueField,
+    selectValueFields,
+    reorderValueFields,
     updateTitle,
     changeView,
   }
-}
+})
+
+if (import.meta.hot)
+  import.meta.hot.accept(acceptHMRUpdate(useWorkbenchStore, import.meta.hot))
