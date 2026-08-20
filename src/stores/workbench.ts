@@ -1,5 +1,6 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onScopeDispose, shallowRef } from 'vue'
+import defaultWorkbookUrl from '../assets/example/test.xlsx?url'
 import {
   applySourceTableChanges,
   categoryUnavailableReason,
@@ -46,6 +47,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   const exportSuccess = shallowRef(false)
   const worksheetEdits = shallowRef<Map<string, WorksheetInterpretation>>(new Map())
   let activeTask: ParseTask | null = null
+  let defaultLoadController: AbortController | null = null
   let worksheetMappings = new Map<string, WorksheetMapping>()
   let lastValidCharts = new Map<string, BarChartModel>()
 
@@ -86,6 +88,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   )
 
   async function importFile(file: File) {
+    defaultLoadController?.abort()
+    defaultLoadController = null
     activeTask?.cancel()
     const task = parseFile(file)
     activeTask = task
@@ -115,6 +119,32 @@ export const useWorkbenchStore = defineStore('workbench', () => {
         isParsing.value = false
         activeTask = null
       }
+    }
+  }
+
+  async function loadDefaultWorkbook() {
+    const controller = new AbortController()
+    defaultLoadController = controller
+    try {
+      const response = await fetch(defaultWorkbookUrl, { signal: controller.signal })
+      if (!response.ok) throw new Error(`Failed to load default workbook: ${response.status}`)
+      const workbook = await response.blob()
+      if (controller.signal.aborted) return
+      defaultLoadController = null
+      await importFile(new File([workbook], 'test.xlsx', {
+        type: workbook.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }))
+    }
+    catch (error) {
+      if (controller.signal.aborted) return
+      parseFailure.value = {
+        code: 'corrupt-file',
+        message: '默认示例表格加载失败。',
+        recovery: '请手动导入 .xlsx 或 .csv 文件。',
+      }
+    }
+    finally {
+      if (defaultLoadController === controller) defaultLoadController = null
     }
   }
 
@@ -282,7 +312,12 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     if (worksheetId && resolution?.valid) lastValidCharts.set(worksheetId, resolution.chart)
   }
 
-  onScopeDispose(() => activeTask?.cancel())
+  void loadDefaultWorkbook()
+
+  onScopeDispose(() => {
+    defaultLoadController?.abort()
+    activeTask?.cancel()
+  })
 
   return {
     dataSource,
