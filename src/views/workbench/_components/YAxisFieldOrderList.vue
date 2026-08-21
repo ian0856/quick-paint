@@ -4,14 +4,14 @@ import { ElButton, ElIcon } from 'element-plus'
 import { shallowRef } from 'vue'
 import type { FieldId } from '../utils'
 
-type OrderedValueField = {
+type OrderedYAxisField = {
   id: FieldId
   label: string
   color: string
 }
 
 const props = defineProps<{
-  fields: OrderedValueField[]
+  fields: OrderedYAxisField[]
   disabled: boolean
 }>()
 
@@ -66,7 +66,7 @@ function resetDrag() {
 </script>
 
 <template>
-  <ul v-if="fields.length" class="m-0 flex flex-col gap-1 p-0" aria-label="数值字段顺序">
+  <ul v-if="fields.length" class="m-0 flex flex-col gap-1 p-0" aria-label="y轴字段顺序">
     <li
       v-for="field in fields"
       :key="field.id"
@@ -100,7 +100,7 @@ function resetDrag() {
         circle
         size="small"
         :disabled="disabled"
-        :aria-label="`移除数值字段：${field.label}`"
+        :aria-label="`移除y轴字段：${field.label}`"
         :title="`移除 ${field.label}`"
         @click="emit('remove', field.id)"
       >

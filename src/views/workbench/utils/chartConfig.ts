@@ -1,7 +1,7 @@
 import type { ChartConfiguration, Plugin } from 'chart.js'
 import type { BarChartModel } from './model'
 
-export const SERIES_COLORS = ['#2563eb', '#d97706', '#059669', '#dc2626', '#7c3aed'] as const
+export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
 export const CHART_FONT = 'Noto Sans SC Variable'
 
@@ -32,7 +32,7 @@ export function createBarChartConfig(
         borderColor: series.color,
         borderWidth: 0,
         borderRadius: 3,
-        maxBarThickness: 56,
+        maxBarThickness: model.settings.maxBarThickness,
       })),
     },
     plugins: options.forExport ? [whiteBackground] : [],
@@ -51,15 +51,15 @@ export function createBarChartConfig(
             boxWidth: options.forExport ? 20 : 12,
             boxHeight: options.forExport ? 12 : 8,
             color: '#344054',
-            font: { family: CHART_FONT, size: options.forExport ? 14 : 11 },
+            font: { family: CHART_FONT, size: model.settings.chartLabelFontSize },
             padding: options.forExport ? 22 : 14,
           },
         },
         title: {
           display: true,
           text: model.title,
-          color: '#172033',
-          font: { family: CHART_FONT, size: options.forExport ? 28 : 18, weight: 700 },
+          color: model.settings.titleColor,
+          font: { family: CHART_FONT, size: model.settings.titleFontSize, weight: 700 },
           padding: { bottom: options.forExport ? 26 : 18 },
         },
         tooltip: {
@@ -72,21 +72,39 @@ export function createBarChartConfig(
         x: {
           border: { color: '#d9dee8' },
           grid: { display: false },
+          title: {
+            display: Boolean(model.settings.xAxisName.trim()),
+            text: model.settings.xAxisName.trim(),
+            color: model.settings.xAxisNameColor,
+            font: { family: CHART_FONT, size: model.settings.xAxisNameFontSize, weight: 600 },
+          },
           ticks: {
             autoSkip: true,
             maxTicksLimit: 16,
             maxRotation: 0,
-            color: '#667085',
-            font: { family: CHART_FONT, size: options.forExport ? 13 : 11 },
+            color: model.settings.xAxisTickLabelColor,
+            font: { family: CHART_FONT, size: model.settings.xAxisTickLabelFontSize },
           },
         },
         y: {
           beginAtZero: true,
           border: { display: false },
           grid: { color: '#e9edf3' },
+          title: {
+            display: Boolean(model.settings.yAxisName.trim()),
+            text: model.settings.yAxisName.trim(),
+            color: model.settings.yAxisNameColor,
+            font: { family: CHART_FONT, size: model.settings.yAxisNameFontSize, weight: 600 },
+          },
           ticks: {
-            color: '#667085',
-            font: { family: CHART_FONT, size: options.forExport ? 13 : 11 },
+            color: model.settings.yAxisTickLabelColor,
+            font: { family: CHART_FONT, size: model.settings.yAxisTickLabelFontSize },
+            callback(value) {
+              return `${this.getLabelForValue(Number(value))}${model.settings.yAxisUnit.trim()}`
+            },
+            stepSize: model.settings.yAxisTickIntervalMode === 'fixed'
+              ? model.settings.fixedYAxisTickInterval
+              : undefined,
           },
         },
       },

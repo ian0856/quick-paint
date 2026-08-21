@@ -37,7 +37,7 @@ onBeforeUnmount(() => chartInstance?.destroy())
         <table class="sr-only" aria-label="柱状图数据">
           <thead>
             <tr>
-              <th scope="col">分类</th>
+              <th scope="col">x轴字段</th>
               <th v-for="series in chart.series" :key="series.fieldId" scope="col">{{ series.fieldName }}</th>
             </tr>
           </thead>

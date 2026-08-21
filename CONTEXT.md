@@ -21,27 +21,47 @@ The value read from one Data Source cell before Quick Paint determines whether i
 _Avoid_: Parsed value, normalized value
 
 **Field**:
-A named column in the Source Table. A Field can be selected as the Category Field or one of the Value Fields.
+A named column in the Source Table. A Field can be selected as the X Axis Field or one of the Y Axis Fields.
 _Avoid_: Attribute, dimension, measure
 
 **Record**:
-A row in the Source Table that contributes one category and up to one value per selected Value Field to the Bar Chart.
+A row in the Source Table that contributes one X Axis label and up to one value per selected Y Axis Field to the Bar Chart.
 _Avoid_: Entry, item
 
-**Category Field**:
+**X Axis Field**:
 The Field whose values label the horizontal positions in the Bar Chart.
-_Avoid_: X-axis field, label column
+_Avoid_: Category Field, label column
 
-**Value Field**:
-A numeric Field selected for the Bar Chart. Up to five Value Fields can be selected, and each produces one Value Series.
-_Avoid_: Y-axis field, metric column
+**Y Axis Field**:
+A numeric Field selected for the Bar Chart. Up to five Y Axis Fields can be selected, and each produces one Value Series.
+_Avoid_: Value Field, metric column
 
 **Value Series**:
-The ordered set of bar heights derived from one selected Value Field. Its position within each category group, legend, and tooltip follows the user-defined Value Field order.
+The ordered set of bar heights derived from one selected Y Axis Field. Its position within each X Axis group, legend, and tooltip follows the user-defined Y Axis Field order.
 _Avoid_: Dataset, metric
 
+**X Axis**:
+The horizontal axis of the Bar Chart, whose positions are labeled by the selected X Axis Field.
+_Avoid_: Category axis
+
+**Y Axis**:
+The vertical axis of the Bar Chart, whose scale represents the values from all selected Y Axis Fields.
+_Avoid_: Value axis, numeric axis
+
+**Bar**:
+The visual mark for one Value Series value from one Record. Bars in the same Value Series share one color across all Records.
+_Avoid_: Bar-chart item, column
+
+**Bar Color Scheme**:
+The complete assignment of one color to each Value Series in a Bar Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet.
+_Avoid_: Bar color list, theme
+
+**Chart Settings**:
+The Worksheet-specific choices for chart title and its text style, Bar Color Scheme, maximum Bar width, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, and Y Axis tick interval. Chart Settings exist only for the current Data Source session.
+_Avoid_: Image settings, global settings
+
 **Bar Chart**:
-The single grouped chart produced from one Category Field and up to five ordered Value Fields while preserving Source Table record order.
+The single grouped chart produced from one X Axis Field and up to five ordered Y Axis Fields while preserving Source Table record order.
 _Avoid_: Chart Composition, visualization
 
 **Chart Image**:

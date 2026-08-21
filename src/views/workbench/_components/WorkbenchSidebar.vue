@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Histogram, UploadFilled } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput, ElOption, ElSelect } from 'element-plus'
+import { ElButton, ElIcon, ElOption, ElSelect } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { computed, useTemplateRef } from 'vue'
 import { useWorkbenchStore } from '../../../stores/workbench'
 import {
-  categoryUnavailableReason,
+  xAxisFieldUnavailableReason,
   LIMITS,
-  valueUnavailableReason,
+  yAxisFieldUnavailableReason,
   type FieldId,
 } from '../utils'
-import ValueFieldOrderList from './ValueFieldOrderList.vue'
+import YAxisFieldOrderList from './YAxisFieldOrderList.vue'
 
 const store = useWorkbenchStore()
 const {
@@ -18,9 +18,8 @@ const {
   worksheets,
   selectedWorksheet: worksheet,
   selectedWorksheetId: worksheetId,
-  categoryFieldId,
-  valueFields,
-  title,
+  xAxisFieldId,
+  yAxisFields,
   isParsing,
   controlsDisabled,
 } = storeToRefs(store)
@@ -33,20 +32,20 @@ const fileMeta = computed(() => {
     : `${(dataSource.value.fileSize / 1024 / 1024).toFixed(1)} MB`
   return `${size} · 本地文件`
 })
-const valueFieldIds = computed(() => valueFields.value.map((field) => field.fieldId))
-const valueLimitReached = computed(() => valueFieldIds.value.length >= LIMITS.chartValueFields)
-const orderedValueFields = computed(() => valueFields.value.flatMap((selection) => {
+const yAxisFieldIds = computed(() => yAxisFields.value.map((field) => field.fieldId))
+const yAxisFieldLimitReached = computed(() => yAxisFieldIds.value.length >= LIMITS.chartYAxisFields)
+const orderedYAxisFields = computed(() => yAxisFields.value.flatMap((selection) => {
   const field = worksheet.value?.fields.find((item) => item.id === selection.fieldId)
   return field ? [{ id: field.id, label: field.label, color: selection.color }] : []
 }))
 
-function valueOptionReason(fieldId: FieldId) {
+function yAxisFieldOptionReason(fieldId: FieldId) {
   const field = worksheet.value?.fields.find((item) => item.id === fieldId)
   if (!field) return '字段不可用'
-  const unavailable = valueUnavailableReason(field, categoryFieldId.value)
+  const unavailable = yAxisFieldUnavailableReason(field, xAxisFieldId.value)
   if (unavailable) return unavailable
-  if (valueLimitReached.value && !valueFieldIds.value.includes(fieldId)) {
-    return `最多选择 ${LIMITS.chartValueFields} 个数值字段`
+  if (yAxisFieldLimitReached.value && !yAxisFieldIds.value.includes(fieldId)) {
+    return `最多选择 ${LIMITS.chartYAxisFields} 个y轴字段`
   }
   return null
 }
@@ -62,13 +61,13 @@ function onFileChange(event: Event) {
   if (file) store.importFile(file)
 }
 
-function removeValueField(id: FieldId) {
-  store.selectValueFields(valueFieldIds.value.filter((fieldId) => fieldId !== id))
+function removeYAxisField(id: FieldId) {
+  store.selectYAxisFields(yAxisFieldIds.value.filter((fieldId) => fieldId !== id))
 }
 </script>
 
 <template>
-  <aside class="h-[42vh] w-full flex flex-none flex-col overflow-auto border-b border-base bg-base px-5 pb-4.5 pt-5.5 sm:h-screen sm:w-70 sm:border-b-0 sm:border-r" aria-label="工作台控制">
+  <aside class="h-[42vh] w-full flex flex-none flex-col overflow-auto border-b border-base bg-base px-5 pb-4.5 pt-5.5 sm:h-screen sm:w-100 sm:border-b-0 sm:border-r" aria-label="工作台控制">
     <div class="min-h-8.5 flex items-center gap-2.5 text-[15px] text-text-strong">
       <span class="h-8 w-8 grid place-items-center rounded-1.5 bg-primary text-white" aria-hidden="true"><ElIcon><Histogram /></ElIcon></span>
       <strong>Quick Paint</strong>
@@ -120,42 +119,42 @@ function removeValueField(id: FieldId) {
         {{ worksheets.filter((item) => !item.valid).length }} 个工作表不可用
       </p>
 
-      <label class="control-label" for="category-field">分类字段</label>
+      <label class="control-label" for="x-axis-field">x轴字段</label>
       <ElSelect
-        id="category-field"
-        :model-value="categoryFieldId"
+        id="x-axis-field"
+        :model-value="xAxisFieldId"
         :disabled="controlsDisabled"
         clearable
         placeholder="请选择"
-        aria-label="分类字段"
-        @change="store.selectCategoryField(($event as FieldId | undefined) ?? null)"
+        aria-label="x轴字段"
+        @change="store.selectXAxisField(($event as FieldId | undefined) ?? null)"
       >
         <ElOption
           v-for="field in worksheet?.fields ?? []"
           :key="field.id"
           :label="field.label"
           :value="field.id"
-          :disabled="Boolean(categoryUnavailableReason(field, valueFieldIds))"
+          :disabled="Boolean(xAxisFieldUnavailableReason(field, yAxisFieldIds))"
         >
-          <span :title="categoryUnavailableReason(field, valueFieldIds) ?? field.label">{{ field.label }}</span>
+          <span :title="xAxisFieldUnavailableReason(field, yAxisFieldIds) ?? field.label">{{ field.label }}</span>
         </ElOption>
       </ElSelect>
 
-      <label class="control-label" for="value-fields">数值字段</label>
+      <label class="control-label" for="y-axis-fields">y轴字段</label>
       <ElSelect
-        id="value-fields"
-        :model-value="valueFieldIds"
-        :disabled="controlsDisabled || categoryFieldId === null"
-        :multiple-limit="LIMITS.chartValueFields"
+        id="y-axis-fields"
+        :model-value="yAxisFieldIds"
+        :disabled="controlsDisabled || xAxisFieldId === null"
+        :multiple-limit="LIMITS.chartYAxisFields"
         multiple
         clearable
         placeholder="请选择"
-        aria-label="数值字段"
-        @change="store.selectValueFields($event as FieldId[])"
+        aria-label="y轴字段"
+        @change="store.selectYAxisFields($event as FieldId[])"
       >
         <template #tag>
-          <span v-if="valueFieldIds.length" class="text-xs text-text">
-            已选择 {{ valueFieldIds.length }}/{{ LIMITS.chartValueFields }} 个字段
+          <span v-if="yAxisFieldIds.length" class="text-xs text-text">
+            已选择 {{ yAxisFieldIds.length }}/{{ LIMITS.chartYAxisFields }} 个字段
           </span>
         </template>
         <ElOption
@@ -163,26 +162,16 @@ function removeValueField(id: FieldId) {
           :key="field.id"
           :label="field.label"
           :value="field.id"
-          :disabled="Boolean(valueOptionReason(field.id))"
+          :disabled="Boolean(yAxisFieldOptionReason(field.id))"
         >
-          <span :title="valueOptionReason(field.id) ?? field.label">{{ field.label }}</span>
+          <span :title="yAxisFieldOptionReason(field.id) ?? field.label">{{ field.label }}</span>
         </ElOption>
       </ElSelect>
-      <ValueFieldOrderList
-        :fields="orderedValueFields"
+      <YAxisFieldOrderList
+        :fields="orderedYAxisFields"
         :disabled="controlsDisabled"
-        @reorder="store.reorderValueFields($event)"
-        @remove="removeValueField"
-      />
-
-      <label class="control-label" for="chart-title">图表标题</label>
-      <ElInput
-        id="chart-title"
-        :model-value="title"
-        :disabled="controlsDisabled"
-        maxlength="120"
-        aria-label="图表标题"
-        @input="store.updateTitle($event)"
+        @reorder="store.reorderYAxisFields($event)"
+        @remove="removeYAxisField"
       />
     </div>
 

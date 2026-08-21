@@ -3,41 +3,57 @@ import { computed, onScopeDispose, shallowRef } from 'vue'
 import defaultWorkbookUrl from '../assets/example/test.xlsx?url'
 import {
   applySourceTableChanges,
-  categoryUnavailableReason,
-  defaultValueFieldIds,
+  colorsForScheme,
+  xAxisFieldUnavailableReason,
+  createDefaultChartSettings,
+  defaultYAxisFieldIds,
   deleteSourceTableRows,
   downloadChart,
   exportBarChart,
   inferUniqueMapping,
   insertSourceTableRow,
   LIMITS,
+  MAX_AXIS_NAME_LENGTH,
+  MAX_AXIS_UNIT_LENGTH,
+  MAX_CHART_FONT_SIZE,
+  MAX_CHART_TITLE_LENGTH,
+  MAX_MAX_BAR_THICKNESS,
+  MIN_CHART_FONT_SIZE,
+  MIN_MAX_BAR_THICKNESS,
+  normalizeHexColor,
   parseFile,
+  firstAvailableSeriesColor,
+  recognizeColorScheme,
   resolveBarChart,
-  SERIES_COLORS,
   validateSourceTable,
+  yAxisSpan,
+  type BarColorSchemeId,
   type BarChartModel,
-  valueUnavailableReason,
+  type ChartSettings,
+  yAxisFieldUnavailableReason,
   type DataSourceInterpretation,
   type FieldId,
   type ParseFailure,
   type ParseTask,
   type SourceTableChange,
-  type ValueFieldSelection,
+  type YAxisFieldSelection,
   type ViewMode,
   type WorksheetInterpretation,
 } from '../views/workbench/utils'
 
 type WorksheetMapping = {
-  categoryFieldId: FieldId | null
-  valueFields: ValueFieldSelection[]
+  xAxisFieldId: FieldId | null
+  yAxisFields: YAxisFieldSelection[]
+  fieldColors: Map<FieldId, string>
+  chartSettings: ChartSettings
 }
 
 export const useWorkbenchStore = defineStore('workbench', () => {
   const dataSource = shallowRef<DataSourceInterpretation | null>(null)
   const selectedWorksheetId = shallowRef<string | null>(null)
-  const categoryFieldId = shallowRef<FieldId | null>(null)
-  const valueFields = shallowRef<ValueFieldSelection[]>([])
-  const title = shallowRef('')
+  const xAxisFieldId = shallowRef<FieldId | null>(null)
+  const yAxisFields = shallowRef<YAxisFieldSelection[]>([])
+  const chartSettings = shallowRef<ChartSettings>(createDefaultChartSettings())
   const viewMode = shallowRef<ViewMode>('chart')
   const isParsing = shallowRef(false)
   const parseFailure = shallowRef<ParseFailure | null>(null)
@@ -50,6 +66,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   let defaultLoadController: AbortController | null = null
   let worksheetMappings = new Map<string, WorksheetMapping>()
   let lastValidCharts = new Map<string, BarChartModel>()
+  let fieldColors = new Map<FieldId, string>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
   const selectedWorksheet = computed(() => {
@@ -66,15 +83,20 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     if (!worksheet) return { valid: true, message: null, cellErrors: [] }
     return validateSourceTable(
       worksheet,
-      categoryFieldId.value,
-      valueFields.value.map(field => field.fieldId),
+      xAxisFieldId.value,
+      yAxisFields.value.map(field => field.fieldId),
     )
   })
   const hasInvalidTableEdits = computed(() => hasTableEdits.value && !sourceTableValidation.value.valid)
   const chartResolution = computed(() => {
     const worksheet = selectedWorksheet.value
     if (!worksheet) return null
-    return resolveBarChart(worksheet, categoryFieldId.value, valueFields.value, title.value)
+    return resolveBarChart(
+      worksheet,
+      xAxisFieldId.value,
+      yAxisFields.value,
+      chartSettings.value,
+    )
   })
   const chart = computed(() => {
     const resolution = chartResolution.value
@@ -83,6 +105,14 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     return lastValidCharts.get(selectedWorksheetId.value) ?? null
   })
   const controlsDisabled = computed(() => isParsing.value || !selectedWorksheet.value)
+  const chartSettingsDisabled = computed(() =>
+    isParsing.value || chartResolution.value?.valid !== true,
+  )
+  const activeColorScheme = computed(() => recognizeColorScheme(yAxisFields.value))
+  const currentYAxisSpan = computed(() => {
+    const resolution = chartResolution.value
+    return resolution?.valid ? yAxisSpan(resolution.chart.series) : 0
+  })
   const exportDisabled = computed(() =>
     isParsing.value || isExporting.value || chartResolution.value?.valid !== true,
   )
@@ -152,26 +182,31 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     selectedWorksheetId.value = id
     const worksheet = worksheets.value.find((item) => item.id === id && item.valid)
     if (!worksheet) {
-      categoryFieldId.value = null
-      valueFields.value = []
-      title.value = ''
+      xAxisFieldId.value = null
+      yAxisFields.value = []
+      chartSettings.value = createDefaultChartSettings()
+      fieldColors = new Map()
       return
     }
     const savedMapping = worksheetMappings.get(worksheet.id)
     if (savedMapping) {
-      categoryFieldId.value = savedMapping.categoryFieldId
-      valueFields.value = savedMapping.valueFields.map((field) => ({ ...field }))
+      xAxisFieldId.value = savedMapping.xAxisFieldId
+      yAxisFields.value = savedMapping.yAxisFields.map((field) => ({ ...field }))
+      fieldColors = new Map(savedMapping.fieldColors)
+      chartSettings.value = { ...savedMapping.chartSettings }
     }
     else {
       const mapping = inferUniqueMapping(worksheet)
-      categoryFieldId.value = mapping.categoryFieldId
-      valueFields.value = mapping.valueFieldIds.map((fieldId, index) => ({
+      chartSettings.value = { ...createDefaultChartSettings(), title: worksheet.name }
+      fieldColors = new Map()
+      xAxisFieldId.value = mapping.xAxisFieldId
+      yAxisFields.value = mapping.yAxisFieldIds.map((fieldId, index) => ({
         fieldId,
-        color: SERIES_COLORS[index]!,
+        color: colorsForScheme(chartSettings.value.baseColorSchemeId)[index]!,
       }))
+      for (const field of yAxisFields.value) fieldColors.set(field.fieldId, field.color)
       saveWorksheetMapping()
     }
-    title.value = worksheet.name
     viewMode.value = 'chart'
     exportError.value = null
     exportSuccess.value = false
@@ -202,60 +237,191 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     replacementFailure.value = null
   }
 
-  function selectCategoryField(id: FieldId | null) {
+  function selectXAxisField(id: FieldId | null) {
     const worksheet = selectedWorksheet.value
     if (!worksheet) return
     if (id !== null) {
       const field = worksheet.fields.find((item) => item.id === id)
-      if (!field || categoryUnavailableReason(field, [])) return
+      if (!field || xAxisFieldUnavailableReason(field, [])) return
     }
 
-    categoryFieldId.value = id
-    valueFields.value = defaultValueFieldIds(worksheet, id).map((fieldId, index) => ({
-      fieldId,
-      color: SERIES_COLORS[index]!,
-    }))
+    xAxisFieldId.value = id
+    const next: YAxisFieldSelection[] = []
+    for (const fieldId of defaultYAxisFieldIds(worksheet, id)) {
+      const color = fieldColors.get(fieldId)
+        ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
+      next.push({ fieldId, color })
+      fieldColors.set(fieldId, color)
+    }
+    yAxisFields.value = next
     finishChartChange()
   }
 
-  function selectValueFields(ids: FieldId[]) {
+  function selectYAxisFields(ids: FieldId[]) {
     const worksheet = selectedWorksheet.value
-    if (!worksheet || categoryFieldId.value === null) return
+    if (!worksheet || xAxisFieldId.value === null) return
 
     const requestedIds = [...new Set(ids)].filter((id) => {
       const field = worksheet.fields.find((item) => item.id === id)
-      return field && !valueUnavailableReason(field, categoryFieldId.value)
+      return field && !yAxisFieldUnavailableReason(field, xAxisFieldId.value)
     })
     const requested = new Set(requestedIds)
-    const retained = valueFields.value.filter((field) => requested.has(field.fieldId))
+    const retained = yAxisFields.value.filter((field) => requested.has(field.fieldId))
     const retainedIds = new Set(retained.map((field) => field.fieldId))
     const next = retained.slice()
 
     for (const fieldId of requestedIds) {
-      if (next.length >= LIMITS.chartValueFields) break
+      if (next.length >= LIMITS.chartYAxisFields) break
       if (retainedIds.has(fieldId)) continue
-      const usedColors = new Set(next.map((field) => field.color))
-      const color = SERIES_COLORS.find((candidate) => !usedColors.has(candidate))
-      if (color) next.push({ fieldId, color })
+      const color = fieldColors.get(fieldId)
+        ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
+      next.push({ fieldId, color })
+      fieldColors.set(fieldId, color)
     }
 
-    valueFields.value = next
+    yAxisFields.value = next
     finishChartChange()
   }
 
-  function reorderValueFields(ids: FieldId[]) {
-    if (ids.length !== valueFields.value.length) return
-    const byId = new Map(valueFields.value.map((field) => [field.fieldId, field]))
+  function reorderYAxisFields(ids: FieldId[]) {
+    if (ids.length !== yAxisFields.value.length) return
+    const byId = new Map(yAxisFields.value.map((field) => [field.fieldId, field]))
     if (new Set(ids).size !== ids.length || ids.some((id) => !byId.has(id))) return
-    valueFields.value = ids.map((id) => byId.get(id)!)
+    yAxisFields.value = ids.map((id) => byId.get(id)!)
     finishChartChange()
   }
 
   function updateTitle(nextTitle: string) {
-    title.value = nextTitle
-    exportError.value = null
-    exportSuccess.value = false
-    rememberValidChart()
+    if (nextTitle.length > MAX_CHART_TITLE_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, title: nextTitle }
+    finishChartChange()
+  }
+
+  function updateTitleFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, titleFontSize: value }
+    finishChartChange()
+  }
+
+  function updateTitleColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, titleColor: color }
+    finishChartChange()
+  }
+
+  function selectBarColorScheme(id: BarColorSchemeId) {
+    const colors = colorsForScheme(id)
+    yAxisFields.value = yAxisFields.value.map((field, index) => ({
+      fieldId: field.fieldId,
+      color: colors[index]!,
+    }))
+    fieldColors = new Map(yAxisFields.value.map(field => [field.fieldId, field.color]))
+    chartSettings.value = { ...chartSettings.value, baseColorSchemeId: id }
+    finishChartChange()
+  }
+
+  function updateValueSeriesColor(fieldId: FieldId, nextColor: string) {
+    const color = normalizeHexColor(nextColor)
+    if (!color || !yAxisFields.value.some(field => field.fieldId === fieldId)) return
+    yAxisFields.value = yAxisFields.value.map(field =>
+      field.fieldId === fieldId ? { ...field, color } : field,
+    )
+    fieldColors.set(fieldId, color)
+    finishChartChange()
+  }
+
+  function updateMaxBarThickness(value: number) {
+    if (!Number.isInteger(value) || value < MIN_MAX_BAR_THICKNESS || value > MAX_MAX_BAR_THICKNESS) return
+    chartSettings.value = { ...chartSettings.value, maxBarThickness: value }
+    finishChartChange()
+  }
+
+  function updateXAxisName(value: string) {
+    if (value.length > MAX_AXIS_NAME_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, xAxisName: value }
+    finishChartChange()
+  }
+
+  function updateYAxisName(value: string) {
+    if (value.length > MAX_AXIS_NAME_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, yAxisName: value }
+    finishChartChange()
+  }
+
+  function updateXAxisNameFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, xAxisNameFontSize: value }
+    finishChartChange()
+  }
+
+  function updateYAxisNameFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, yAxisNameFontSize: value }
+    finishChartChange()
+  }
+
+  function updateXAxisNameColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, xAxisNameColor: color }
+    finishChartChange()
+  }
+
+  function updateYAxisNameColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, yAxisNameColor: color }
+    finishChartChange()
+  }
+
+  function updateYAxisUnit(value: string) {
+    if (value.length > MAX_AXIS_UNIT_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, yAxisUnit: value }
+    finishChartChange()
+  }
+
+  function updateChartLabelFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, chartLabelFontSize: value }
+    finishChartChange()
+  }
+
+  function updateXAxisTickLabelFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, xAxisTickLabelFontSize: value }
+    finishChartChange()
+  }
+
+  function updateYAxisTickLabelFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, yAxisTickLabelFontSize: value }
+    finishChartChange()
+  }
+
+  function updateXAxisTickLabelColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, xAxisTickLabelColor: color }
+    finishChartChange()
+  }
+
+  function updateYAxisTickLabelColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, yAxisTickLabelColor: color }
+    finishChartChange()
+  }
+
+  function updateYAxisTickIntervalMode(mode: ChartSettings['yAxisTickIntervalMode']) {
+    chartSettings.value = { ...chartSettings.value, yAxisTickIntervalMode: mode }
+    finishChartChange()
+  }
+
+  function updateFixedYAxisTickInterval(value: number) {
+    if (!Number.isFinite(value) || value <= 0) return
+    chartSettings.value = { ...chartSettings.value, fixedYAxisTickInterval: value }
+    finishChartChange()
   }
 
   function updateSourceTable(changes: readonly SourceTableChange[]) {
@@ -285,8 +451,10 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   function saveWorksheetMapping() {
     if (!selectedWorksheetId.value) return
     worksheetMappings.set(selectedWorksheetId.value, {
-      categoryFieldId: categoryFieldId.value,
-      valueFields: valueFields.value.map((field) => ({ ...field })),
+      xAxisFieldId: xAxisFieldId.value,
+      yAxisFields: yAxisFields.value.map((field) => ({ ...field })),
+      fieldColors: new Map(fieldColors),
+      chartSettings: { ...chartSettings.value },
     })
   }
 
@@ -324,9 +492,9 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     worksheets,
     selectedWorksheet,
     selectedWorksheetId,
-    categoryFieldId,
-    valueFields,
-    title,
+    xAxisFieldId,
+    yAxisFields,
+    chartSettings,
     viewMode,
     isParsing,
     parseFailure,
@@ -339,21 +507,49 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     sourceTableValidation,
     hasInvalidTableEdits,
     controlsDisabled,
+    chartSettingsDisabled,
+    activeColorScheme,
+    currentYAxisSpan,
     exportDisabled,
     importFile,
     selectWorksheet,
     exportChart,
     dismissReplacementFailure,
-    selectCategoryField,
-    selectValueFields,
-    reorderValueFields,
+    selectXAxisField,
+    selectYAxisFields,
+    reorderYAxisFields,
     updateTitle,
+    updateTitleFontSize,
+    updateTitleColor,
+    selectBarColorScheme,
+    updateValueSeriesColor,
+    updateMaxBarThickness,
+    updateXAxisName,
+    updateYAxisName,
+    updateXAxisNameFontSize,
+    updateYAxisNameFontSize,
+    updateXAxisNameColor,
+    updateYAxisNameColor,
+    updateYAxisUnit,
+    updateChartLabelFontSize,
+    updateXAxisTickLabelFontSize,
+    updateYAxisTickLabelFontSize,
+    updateXAxisTickLabelColor,
+    updateYAxisTickLabelColor,
+    updateYAxisTickIntervalMode,
+    updateFixedYAxisTickInterval,
     updateSourceTable,
     insertSourceTableRecord,
     deleteSourceTableRecords,
     changeView,
   }
 })
+
+function isValidChartFontSize(value: number) {
+  return Number.isInteger(value)
+    && value >= MIN_CHART_FONT_SIZE
+    && value <= MAX_CHART_FONT_SIZE
+}
 
 if (import.meta.hot)
   import.meta.hot.accept(acceptHMRUpdate(useWorkbenchStore, import.meta.hot))
