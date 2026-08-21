@@ -65,12 +65,16 @@ export type ParseFailure = {
 
 export type ViewMode = 'chart' | 'table'
 
-export type BarColorSchemeId = 'classic' | 'contrast' | 'soft'
-export type BarColorSchemeSelection = BarColorSchemeId | 'custom'
+export type SeriesColorSchemeId = 'classic' | 'contrast' | 'soft'
+export type SeriesColorSchemeSelection = SeriesColorSchemeId | 'custom'
+export type ChartType = 'bar' | 'line'
+export type LineStyle = 'straight' | 'smooth' | 'area'
 export type YAxisTickIntervalMode = 'auto' | 'fixed'
 
 export type ChartSettings = {
-  baseColorSchemeId: BarColorSchemeId
+  chartType: ChartType
+  lineStyle: LineStyle
+  baseColorSchemeId: SeriesColorSchemeId
   maxBarThickness: number
   title: string
   titleFontSize: number
@@ -101,7 +105,7 @@ export type ValueSeries = YAxisFieldSelection & {
   values: Array<number | null>
 }
 
-export type BarChartModel = {
+export type ChartModel = {
   title: string
   xAxisFieldId: FieldId
   labels: string[]
@@ -109,13 +113,16 @@ export type BarChartModel = {
   settings: ChartSettings
 }
 
+export type BarChartModel = ChartModel & { settings: ChartSettings & { chartType: 'bar' } }
+export type LineChartModel = ChartModel & { settings: ChartSettings & { chartType: 'line' } }
+
 export type ChartDiagnostic = {
   code: 'mapping-required' | 'too-many-records' | 'invalid-mapping' | 'no-values'
   message: string
 }
 
 export type ChartResolution =
-  | { valid: true; chart: BarChartModel; diagnostic: null }
+  | { valid: true; chart: ChartModel; diagnostic: null }
   | { valid: false; chart: null; diagnostic: ChartDiagnostic }
 
 export const LIMITS = {

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ElColorPicker, ElRadio, ElRadioGroup } from 'element-plus'
-import { BAR_COLOR_SCHEMES, type BarColorSchemeId, type BarColorSchemeSelection, type FieldId } from '../utils'
+import { SERIES_COLOR_SCHEMES, type FieldId, type SeriesColorSchemeId, type SeriesColorSchemeSelection } from '../utils'
 
 defineProps<{
   series: Array<{ fieldId: FieldId; label: string; color: string }>
-  activeScheme: BarColorSchemeSelection
+  activeScheme: SeriesColorSchemeSelection
   disabled: boolean
 }>()
 
 const emit = defineEmits<{
-  selectScheme: [id: BarColorSchemeId]
+  selectScheme: [id: SeriesColorSchemeId]
   updateColor: [fieldId: FieldId, color: string]
 }>()
 
@@ -30,10 +30,10 @@ function updateColor(fieldId: FieldId, color: string | null) {
       :model-value="activeScheme"
       :disabled="disabled"
       aria-label="配色方案"
-      @change="emit('selectScheme', $event as BarColorSchemeId)"
+      @change="emit('selectScheme', $event as SeriesColorSchemeId)"
     >
       <ElRadio
-        v-for="scheme in BAR_COLOR_SCHEMES"
+        v-for="scheme in SERIES_COLOR_SCHEMES"
         :key="scheme.id"
         class="scheme-option m-0! h-9! w-full! border border-base rounded-1 px-2.5!"
         :value="scheme.id"
@@ -63,7 +63,7 @@ function updateColor(fieldId: FieldId, color: string | null) {
           :model-value="item.color"
           :disabled="disabled"
           :show-alpha="false"
-          :predefine="BAR_COLOR_SCHEMES.flatMap(scheme => [...scheme.colors])"
+          :predefine="SERIES_COLOR_SCHEMES.flatMap(scheme => [...scheme.colors])"
           :aria-label="`设置系列颜色：${item.label}`"
           @change="updateColor(item.fieldId, $event)"
         />

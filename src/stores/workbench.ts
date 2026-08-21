@@ -9,7 +9,7 @@ import {
   defaultYAxisFieldIds,
   deleteSourceTableRows,
   downloadChart,
-  exportBarChart,
+  exportChartImage,
   inferUniqueMapping,
   insertSourceTableRow,
   LIMITS,
@@ -24,11 +24,11 @@ import {
   parseFile,
   firstAvailableSeriesColor,
   recognizeColorScheme,
-  resolveBarChart,
+  resolveChart,
   validateSourceTable,
   yAxisSpan,
-  type BarColorSchemeId,
-  type BarChartModel,
+  type SeriesColorSchemeId,
+  type ChartModel,
   type ChartSettings,
   yAxisFieldUnavailableReason,
   type DataSourceInterpretation,
@@ -65,7 +65,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   let activeTask: ParseTask | null = null
   let defaultLoadController: AbortController | null = null
   let worksheetMappings = new Map<string, WorksheetMapping>()
-  let lastValidCharts = new Map<string, BarChartModel>()
+  let lastValidCharts = new Map<string, ChartModel>()
   let fieldColors = new Map<FieldId, string>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
@@ -91,7 +91,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   const chartResolution = computed(() => {
     const worksheet = selectedWorksheet.value
     if (!worksheet) return null
-    return resolveBarChart(
+    return resolveChart(
       worksheet,
       xAxisFieldId.value,
       yAxisFields.value,
@@ -220,7 +220,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     exportError.value = null
     exportSuccess.value = false
     try {
-      const output = await exportBarChart(resolution.chart)
+      const output = await exportChartImage(resolution.chart)
       downloadChart(output)
       exportSuccess.value = true
       window.setTimeout(() => { exportSuccess.value = false }, 2400)
@@ -297,6 +297,16 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateChartType(chartType: ChartSettings['chartType']) {
+    chartSettings.value = { ...chartSettings.value, chartType }
+    finishChartChange()
+  }
+
+  function updateLineStyle(lineStyle: ChartSettings['lineStyle']) {
+    chartSettings.value = { ...chartSettings.value, lineStyle }
+    finishChartChange()
+  }
+
   function updateTitleFontSize(value: number) {
     if (!isValidChartFontSize(value)) return
     chartSettings.value = { ...chartSettings.value, titleFontSize: value }
@@ -310,7 +320,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
-  function selectBarColorScheme(id: BarColorSchemeId) {
+  function selectSeriesColorScheme(id: SeriesColorSchemeId) {
     const colors = colorsForScheme(id)
     yAxisFields.value = yAxisFields.value.map((field, index) => ({
       fieldId: field.fieldId,
@@ -518,10 +528,12 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     selectXAxisField,
     selectYAxisFields,
     reorderYAxisFields,
+    updateChartType,
+    updateLineStyle,
     updateTitle,
     updateTitleFontSize,
     updateTitleColor,
-    selectBarColorScheme,
+    selectSeriesColorScheme,
     updateValueSeriesColor,
     updateMaxBarThickness,
     updateXAxisName,

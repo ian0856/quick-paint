@@ -5,10 +5,11 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
-import BarColorSettings from './BarColorSettings.vue'
+import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
 import ChartLabelSettings from './ChartLabelSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
+import ChartTypeSettings from './ChartTypeSettings.vue'
 
 const store = useWorkbenchStore()
 const {
@@ -43,6 +44,15 @@ const diagnostic = computed(() => {
 
     <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-6" :aria-disabled="chartSettingsDisabled">
       <div class="py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+        <ChartTypeSettings
+          :chart-type="chartSettings.chartType"
+          :line-style="chartSettings.lineStyle"
+          :disabled="chartSettingsDisabled"
+          @update-chart-type="store.updateChartType"
+          @update-line-style="store.updateLineStyle"
+        />
+      </div>
+      <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <ChartTitleSettings
           :key="worksheet?.id"
           :title="chartSettings.title"
@@ -55,15 +65,15 @@ const diagnostic = computed(() => {
         />
       </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
-        <BarColorSettings
+        <SeriesColorSettings
           :series="series"
           :active-scheme="activeColorScheme"
           :disabled="chartSettingsDisabled"
-          @select-scheme="store.selectBarColorScheme"
+          @select-scheme="store.selectSeriesColorScheme"
           @update-color="store.updateValueSeriesColor"
         />
       </div>
-      <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+      <div v-if="chartSettings.chartType === 'bar'" class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <BarLayoutSettings
           :max-bar-thickness="chartSettings.maxBarThickness"
           :disabled="chartSettingsDisabled"

@@ -1,11 +1,11 @@
 import type {
-  BarColorSchemeId,
-  BarColorSchemeSelection,
+  SeriesColorSchemeId,
+  SeriesColorSchemeSelection,
   ChartSettings,
   YAxisFieldSelection,
 } from './model'
 
-export const BAR_COLOR_SCHEMES = [
+export const SERIES_COLOR_SCHEMES = [
   {
     id: 'classic',
     label: '经典',
@@ -22,7 +22,7 @@ export const BAR_COLOR_SCHEMES = [
     colors: ['#4E79A7', '#F28E2B', '#59A14F', '#E15759', '#B07AA1'],
   },
 ] as const satisfies ReadonlyArray<{
-  id: BarColorSchemeId
+  id: SeriesColorSchemeId
   label: string
   colors: readonly [string, string, string, string, string]
 }>
@@ -46,6 +46,8 @@ export const MAX_Y_AXIS_TICK_INTERVALS = 200
 
 export function createDefaultChartSettings(): ChartSettings {
   return {
+    chartType: 'bar',
+    lineStyle: 'straight',
     baseColorSchemeId: 'classic',
     maxBarThickness: DEFAULT_MAX_BAR_THICKNESS,
     title: '',
@@ -68,21 +70,21 @@ export function createDefaultChartSettings(): ChartSettings {
   }
 }
 
-export function colorsForScheme(id: BarColorSchemeId): readonly string[] {
-  return BAR_COLOR_SCHEMES.find(scheme => scheme.id === id)!.colors
+export function colorsForScheme(id: SeriesColorSchemeId): readonly string[] {
+  return SERIES_COLOR_SCHEMES.find(scheme => scheme.id === id)!.colors
 }
 
 export function recognizeColorScheme(
   yAxisFields: readonly YAxisFieldSelection[],
-): BarColorSchemeSelection {
-  const matching = BAR_COLOR_SCHEMES.find(scheme =>
+): SeriesColorSchemeSelection {
+  const matching = SERIES_COLOR_SCHEMES.find(scheme =>
     yAxisFields.every((field, index) => sameColor(field.color, scheme.colors[index]!)),
   )
   return matching?.id ?? 'custom'
 }
 
 export function firstAvailableSeriesColor(
-  schemeId: BarColorSchemeId,
+  schemeId: SeriesColorSchemeId,
   yAxisFields: readonly YAxisFieldSelection[],
 ): string {
   const usedColors = new Set(yAxisFields.map(field => field.color.toUpperCase()))

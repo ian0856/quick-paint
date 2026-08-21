@@ -1,10 +1,10 @@
 import { Chart } from 'chart.js/auto'
-import { CHART_FONT, createBarChartConfig } from './chartConfig'
-import type { BarChartModel } from './model'
+import { CHART_FONT, createChartConfig } from './chartConfig'
+import type { ChartModel } from './model'
 
 export type ChartExport = { blob: Blob; fileName: string }
 
-export async function exportBarChart(model: BarChartModel): Promise<ChartExport> {
+export async function exportChartImage(model: ChartModel): Promise<ChartExport> {
   await loadChartFont(model.settings.titleFontSize)
   const canvas = document.createElement('canvas')
   canvas.width = 1600
@@ -17,7 +17,7 @@ export async function exportBarChart(model: BarChartModel): Promise<ChartExport>
     throw new Error('图表标题过长，无法完整放入导出图片。')
   }
 
-  const chart = new Chart(context, createBarChartConfig(model, { responsive: false, forExport: true }))
+  const chart = new Chart(context, createChartConfig(model, { responsive: false, forExport: true }))
   try {
     chart.update('none')
     if (!hasVisiblePlot(context, canvas.width, canvas.height)) {

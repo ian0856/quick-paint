@@ -1,11 +1,11 @@
-import type { ChartConfiguration, Plugin } from 'chart.js'
-import type { BarChartModel } from './model'
+import type { ChartConfiguration, ChartDataset, ChartType, Plugin } from 'chart.js'
+import type { ChartModel } from './model'
 
 export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
 export const CHART_FONT = 'Noto Sans SC Variable'
 
-const whiteBackground: Plugin<'bar'> = {
+const whiteBackground: Plugin<ChartType> = {
   id: 'white-background',
   beforeDraw(chart) {
     const context = chart.ctx
@@ -17,23 +17,17 @@ const whiteBackground: Plugin<'bar'> = {
   },
 }
 
-export function createBarChartConfig(
-  model: BarChartModel,
+export function createChartConfig(
+  model: ChartModel,
   options: { responsive: boolean; forExport?: boolean },
-): ChartConfiguration<'bar', Array<number | null>, string> {
+): ChartConfiguration<'bar' | 'line', Array<number | null>, string> {
   return {
-    type: 'bar',
+    type: model.settings.chartType,
     data: {
       labels: model.labels,
-      datasets: model.series.map((series) => ({
-        label: series.fieldName,
-        data: series.values,
-        backgroundColor: series.color,
-        borderColor: series.color,
-        borderWidth: 0,
-        borderRadius: 3,
-        maxBarThickness: model.settings.maxBarThickness,
-      })),
+      datasets: model.series.map(series => model.settings.chartType === 'bar'
+        ? createBarDataset(model, series)
+        : createLineDataset(model, series)),
     },
     plugins: options.forExport ? [whiteBackground] : [],
     options: {
@@ -88,6 +82,7 @@ export function createBarChartConfig(
         },
         y: {
           beginAtZero: true,
+          stacked: false,
           border: { display: false },
           grid: { color: '#e9edf3' },
           title: {
@@ -110,4 +105,50 @@ export function createBarChartConfig(
       },
     },
   }
+}
+
+function createBarDataset(
+  model: ChartModel,
+  series: ChartModel['series'][number],
+): ChartDataset<'bar', Array<number | null>> {
+  return {
+    label: series.fieldName,
+    data: series.values,
+    backgroundColor: series.color,
+    borderColor: series.color,
+    borderWidth: 0,
+    borderRadius: 3,
+    maxBarThickness: model.settings.maxBarThickness,
+  }
+}
+
+function createLineDataset(
+  model: ChartModel,
+  series: ChartModel['series'][number],
+): ChartDataset<'line', Array<number | null>> {
+  const smooth = model.settings.lineStyle === 'smooth'
+  const area = model.settings.lineStyle === 'area'
+  return {
+    label: series.fieldName,
+    data: series.values,
+    backgroundColor: area ? hexWithOpacity(series.color, 0.15) : series.color,
+    borderColor: series.color,
+    borderWidth: 2,
+    cubicInterpolationMode: smooth ? 'monotone' : 'default',
+    fill: area ? 'origin' : false,
+    pointBackgroundColor: series.color,
+    pointBorderColor: series.color,
+    pointRadius: 4,
+    pointHoverRadius: 5,
+    spanGaps: false,
+    tension: smooth ? 0.4 : 0,
+  }
+}
+
+function hexWithOpacity(color: string, opacity: number) {
+  const value = color.slice(1)
+  const red = Number.parseInt(value.slice(0, 2), 16)
+  const green = Number.parseInt(value.slice(2, 4), 16)
+  const blue = Number.parseInt(value.slice(4, 6), 16)
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`
 }
