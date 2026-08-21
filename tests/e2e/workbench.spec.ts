@@ -244,7 +244,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   )
 
   const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
+  const controls = page.getByRole('complementary', { name: '工作台控制' })
   await expect(settings).toBeVisible()
+  await expect(controls.getByRole('textbox', { name: '图表标题' })).toHaveCount(0)
+  await expect(settings.getByRole('textbox', { name: '图表标题' })).toHaveValue('销售')
   await expect(page.getByRole('button', { name: '打开高级设置' })).toBeHidden()
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeEnabled()
@@ -253,6 +256,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await settings.getByText('柔和', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
 
+  await settings.getByRole('textbox', { name: '图表标题' }).fill('销售报表')
+  const titleFontSize = settings.getByRole('spinbutton', { name: '图表标题字体大小' })
+  await titleFontSize.press('ArrowUp')
+  await expect(titleFontSize).toHaveValue('19')
   await settings.getByRole('textbox', { name: 'x轴名称' }).fill('地区')
   await settings.getByRole('textbox', { name: 'y轴名称' }).fill('销售额')
   await settings.getByRole('textbox', { name: 'y轴单位' }).fill('万元')
@@ -279,11 +286,14 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
 
   await page.locator('label[for="worksheet"] + .el-select').click()
   await page.getByRole('option', { name: '订单' }).click()
+  await expect(settings.getByRole('textbox', { name: '图表标题' })).toHaveValue('订单')
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
 
   await page.locator('label[for="worksheet"] + .el-select').click()
   await page.getByRole('option', { name: '销售' }).click()
+  await expect(settings.getByRole('textbox', { name: '图表标题' })).toHaveValue('销售报表')
+  await expect(settings.getByRole('spinbutton', { name: '图表标题字体大小' })).toHaveValue('19')
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('地区')
   await expect(settings.getByRole('textbox', { name: 'y轴名称' })).toHaveValue('销售额')
   await expect(settings.getByRole('textbox', { name: 'y轴单位' })).toHaveValue('万元')

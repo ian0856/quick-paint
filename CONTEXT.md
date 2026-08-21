@@ -57,7 +57,7 @@ The complete assignment of one color to each Value Series in a Bar Chart. Quick 
 _Avoid_: Bar color list, theme
 
 **Chart Settings**:
-The Worksheet-specific choices for Bar Color Scheme, maximum Bar width, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, and Y Axis tick interval. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for chart title and its text style, Bar Color Scheme, maximum Bar width, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, and Y Axis tick interval. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Bar Chart**:
