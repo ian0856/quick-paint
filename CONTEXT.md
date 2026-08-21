@@ -40,6 +40,18 @@ _Avoid_: Y-axis field, metric column
 The ordered set of bar heights derived from one selected Value Field. Its position within each category group, legend, and tooltip follows the user-defined Value Field order.
 _Avoid_: Dataset, metric
 
+**Bar**:
+The visual mark for one Value Series value from one Record. Bars in the same Value Series share one color across all Records.
+_Avoid_: Bar-chart item, column
+
+**Bar Color Scheme**:
+The complete assignment of one color to each Value Series in a Bar Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet.
+_Avoid_: Bar color list, theme
+
+**Chart Settings**:
+The Worksheet-specific choices for Bar Color Scheme, maximum Bar width, category and value axis names, and value-axis tick interval. Chart Settings exist only for the current Data Source session.
+_Avoid_: Image settings, global settings
+
 **Bar Chart**:
 The single grouped chart produced from one Category Field and up to five ordered Value Fields while preserving Source Table record order.
 _Avoid_: Chart Composition, visualization

@@ -1,7 +1,7 @@
 import type { ChartConfiguration, Plugin } from 'chart.js'
 import type { BarChartModel } from './model'
 
-export const SERIES_COLORS = ['#2563eb', '#d97706', '#059669', '#dc2626', '#7c3aed'] as const
+export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
 export const CHART_FONT = 'Noto Sans SC Variable'
 
@@ -32,7 +32,7 @@ export function createBarChartConfig(
         borderColor: series.color,
         borderWidth: 0,
         borderRadius: 3,
-        maxBarThickness: 56,
+        maxBarThickness: model.settings.maxBarThickness,
       })),
     },
     plugins: options.forExport ? [whiteBackground] : [],
@@ -72,6 +72,12 @@ export function createBarChartConfig(
         x: {
           border: { color: '#d9dee8' },
           grid: { display: false },
+          title: {
+            display: Boolean(model.settings.categoryAxisName.trim()),
+            text: model.settings.categoryAxisName.trim(),
+            color: '#344054',
+            font: { family: CHART_FONT, size: options.forExport ? 15 : 12, weight: 600 },
+          },
           ticks: {
             autoSkip: true,
             maxTicksLimit: 16,
@@ -84,9 +90,18 @@ export function createBarChartConfig(
           beginAtZero: true,
           border: { display: false },
           grid: { color: '#e9edf3' },
+          title: {
+            display: Boolean(model.settings.valueAxisName.trim()),
+            text: model.settings.valueAxisName.trim(),
+            color: '#344054',
+            font: { family: CHART_FONT, size: options.forExport ? 15 : 12, weight: 600 },
+          },
           ticks: {
             color: '#667085',
             font: { family: CHART_FONT, size: options.forExport ? 13 : 11 },
+            stepSize: model.settings.valueAxisTickIntervalMode === 'fixed'
+              ? model.settings.fixedValueAxisTickInterval
+              : undefined,
           },
         },
       },

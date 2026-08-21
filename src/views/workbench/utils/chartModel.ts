@@ -1,5 +1,6 @@
 import type {
   BarChartModel,
+  ChartSettings,
   ChartResolution,
   FieldId,
   SourceCell,
@@ -8,6 +9,11 @@ import type {
   WorksheetInterpretation,
 } from './model'
 import { LIMITS } from './model'
+import {
+  createDefaultChartSettings,
+  validateFixedValueAxisTickInterval,
+  valueAxisSpan,
+} from './chartSettings'
 
 const STRICT_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
 const NON_ZERO_LEADING_ZERO = /^[+-]?0\d/
@@ -63,6 +69,7 @@ export function resolveBarChart(
   categoryFieldId: FieldId | null,
   valueFields: readonly ValueFieldSelection[],
   title: string,
+  settings: ChartSettings = createDefaultChartSettings(),
 ): ChartResolution {
   if (worksheet.recordCount > LIMITS.chartRecords) {
     return {
@@ -122,11 +129,19 @@ export function resolveBarChart(
     }
   }
 
+  const intervalValidation = validateFixedValueAxisTickInterval(
+    String(settings.fixedValueAxisTickInterval),
+    valueAxisSpan(series),
+  )
+  const effectiveSettings = settings.valueAxisTickIntervalMode === 'fixed' && !intervalValidation.valid
+    ? { ...settings, valueAxisTickIntervalMode: 'auto' as const }
+    : settings
   const chart: BarChartModel = {
     title: title.trim() || '未命名图表',
     categoryFieldId,
     labels: categoryField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
     series,
+    settings: { ...effectiveSettings },
   }
   return { valid: true, chart, diagnostic: null }
 }

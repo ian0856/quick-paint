@@ -65,6 +65,19 @@ export type ParseFailure = {
 
 export type ViewMode = 'chart' | 'table'
 
+export type BarColorSchemeId = 'classic' | 'contrast' | 'soft'
+export type BarColorSchemeSelection = BarColorSchemeId | 'custom'
+export type ValueAxisTickIntervalMode = 'auto' | 'fixed'
+
+export type ChartSettings = {
+  baseColorSchemeId: BarColorSchemeId
+  maxBarThickness: number
+  categoryAxisName: string
+  valueAxisName: string
+  valueAxisTickIntervalMode: ValueAxisTickIntervalMode
+  fixedValueAxisTickInterval: number
+}
+
 export type ValueFieldSelection = {
   fieldId: FieldId
   color: string
@@ -80,6 +93,7 @@ export type BarChartModel = {
   categoryFieldId: FieldId
   labels: string[]
   series: ValueSeries[]
+  settings: ChartSettings
 }
 
 export type ChartDiagnostic = {
