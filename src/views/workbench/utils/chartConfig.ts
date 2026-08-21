@@ -1,5 +1,5 @@
 import type { ChartConfiguration, ChartDataset, ChartType, Plugin } from 'chart.js'
-import type { BarChartModel, ChartModel, LineChartModel } from './model'
+import type { ChartModel } from './model'
 
 export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
@@ -22,10 +22,10 @@ export function createChartConfig(
   options: { responsive: boolean; forExport?: boolean },
 ): ChartConfiguration<'bar' | 'line', Array<number | null>, string> {
   return {
-    type: model.type,
+    type: model.settings.chartType,
     data: {
       labels: model.labels,
-      datasets: model.series.map(series => model.type === 'bar'
+      datasets: model.series.map(series => model.settings.chartType === 'bar'
         ? createBarDataset(model, series)
         : createLineDataset(model, series)),
     },
@@ -108,8 +108,8 @@ export function createChartConfig(
 }
 
 function createBarDataset(
-  model: BarChartModel,
-  series: BarChartModel['series'][number],
+  model: ChartModel,
+  series: ChartModel['series'][number],
 ): ChartDataset<'bar', Array<number | null>> {
   return {
     label: series.fieldName,
@@ -123,8 +123,8 @@ function createBarDataset(
 }
 
 function createLineDataset(
-  model: LineChartModel,
-  series: LineChartModel['series'][number],
+  model: ChartModel,
+  series: ChartModel['series'][number],
 ): ChartDataset<'line', Array<number | null>> {
   const smooth = model.settings.lineStyle === 'smooth'
   const area = model.settings.lineStyle === 'area'

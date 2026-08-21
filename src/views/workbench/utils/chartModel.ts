@@ -136,7 +136,6 @@ export function resolveChart(
     ? { ...settings, yAxisTickIntervalMode: 'auto' as const }
     : settings
   const chart: ChartModel = {
-    type: settings.chartType,
     title: settings.title.trim() || '未命名图表',
     xAxisFieldId,
     labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),

@@ -286,7 +286,9 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('slider', { name: '最大柱宽' })).toHaveCount(0)
   await expect(settings.getByText('直线', { exact: true })).toBeVisible()
   await settings.getByText('平滑', { exact: true }).click()
+  await expect(settings.getByRole('radio', { name: '平滑' })).toBeChecked()
   await settings.getByText('面积', { exact: true }).click()
+  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')).toHaveText(['销售额', '利润'])
 
@@ -315,12 +317,13 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('spinbutton', { name: '图表标签字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('spinbutton', { name: 'x轴刻度文本字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
-  await expect(settings.getByText('面积', { exact: true })).toBeVisible()
+  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
   await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
   await settings.getByText('柱状图', { exact: true }).click()
+  await expect(settings.getByRole('radio', { name: '柱状图' })).toBeChecked()
   await expect(settings.getByText('120 px')).toBeVisible()
   await settings.getByText('折线图', { exact: true }).click()
-  await expect(settings.getByText('面积', { exact: true })).toBeVisible()
+  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
   await expect(settings.getByText('固定', { exact: true })).toBeVisible()
   await expect(settings.getByRole('button', { name: /恢复默认/ })).toHaveCount(0)
 
@@ -353,6 +356,10 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await settings.getByText('折线图', { exact: true }).click()
   await settings.getByText('平滑', { exact: true }).click()
   await expect(page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })).toBeVisible()
+  const sparseLineData = page.getByRole('table', { name: '折线图数据' })
+  await expect(sparseLineData).toBeAttached()
+  await expect(sparseLineData.getByRole('row').nth(2)).toContainText('（空白）')
+  await expect(sparseLineData.getByRole('row').nth(3)).toContainText('（空白）')
 
   await page.getByRole('button', { name: '移除y轴字段：销售额' }).click()
   await page.getByRole('button', { name: '移除y轴字段：利润' }).click()
@@ -374,7 +381,10 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await expect(settings.getByText('折线样式', { exact: true })).toHaveCount(0)
   await settings.getByText('折线图', { exact: true }).click()
   await expect(page.getByRole('img', { name: '折线图：Sheet1，共 1 条数据，1 个数值系列' })).toBeVisible()
-  await expect(settings.getByText('直线', { exact: true })).toBeVisible()
+  await expect(settings.getByRole('radio', { name: '直线' })).toBeChecked()
+  const singlePointData = page.getByRole('table', { name: '折线图数据' })
+  await expect(singlePointData.getByRole('row').nth(1)).toContainText('一月')
+  await expect(singlePointData.getByRole('row').nth(1)).toContainText('10')
 })
 
 test('opens responsive Chart Settings as a focus-restoring drawer', async ({ page }) => {

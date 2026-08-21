@@ -105,7 +105,7 @@ export type ValueSeries = YAxisFieldSelection & {
   values: Array<number | null>
 }
 
-type ChartModelBase = {
+export type ChartModel = {
   title: string
   xAxisFieldId: FieldId
   labels: string[]
@@ -113,9 +113,8 @@ type ChartModelBase = {
   settings: ChartSettings
 }
 
-export type BarChartModel = ChartModelBase & { type: 'bar' }
-export type LineChartModel = ChartModelBase & { type: 'line' }
-export type ChartModel = BarChartModel | LineChartModel
+export type BarChartModel = ChartModel & { settings: ChartSettings & { chartType: 'bar' } }
+export type LineChartModel = ChartModel & { settings: ChartSettings & { chartType: 'line' } }
 
 export type ChartDiagnostic = {
   code: 'mapping-required' | 'too-many-records' | 'invalid-mapping' | 'no-values'

@@ -6,13 +6,13 @@ import type { BarChartModel, LineChartModel, LineStyle } from './model'
 describe('createChartConfig Bar Chart variant', () => {
   test('maps Chart Settings into preview and export configuration', () => {
     const model: BarChartModel = {
-      type: 'bar',
       title: '销售',
       xAxisFieldId: 0,
       labels: ['华东'],
       series: [{ fieldId: 1, fieldName: '销售额', color: '#123456', values: [86] }],
       settings: {
         ...createDefaultChartSettings(),
+        chartType: 'bar',
         maxBarThickness: 72,
         title: '销售',
         titleFontSize: 24,
@@ -66,7 +66,6 @@ describe('createChartConfig Bar Chart variant', () => {
 describe('createChartConfig Line Chart variants', () => {
   function lineModel(lineStyle: LineStyle): LineChartModel {
     return {
-      type: 'line',
       title: '趋势',
       xAxisFieldId: 0,
       labels: ['一月', '二月', '三月'],
