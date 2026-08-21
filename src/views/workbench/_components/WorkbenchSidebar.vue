@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Histogram, UploadFilled } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput, ElOption, ElSelect } from 'element-plus'
+import { ElButton, ElIcon, ElOption, ElSelect } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { computed, useTemplateRef } from 'vue'
 import { useWorkbenchStore } from '../../../stores/workbench'
@@ -20,7 +20,6 @@ const {
   selectedWorksheetId: worksheetId,
   xAxisFieldId,
   yAxisFields,
-  title,
   isParsing,
   controlsDisabled,
 } = storeToRefs(store)
@@ -173,16 +172,6 @@ function removeYAxisField(id: FieldId) {
         :disabled="controlsDisabled"
         @reorder="store.reorderYAxisFields($event)"
         @remove="removeYAxisField"
-      />
-
-      <label class="control-label" for="chart-title">图表标题</label>
-      <ElInput
-        id="chart-title"
-        :model-value="title"
-        :disabled="controlsDisabled"
-        maxlength="120"
-        aria-label="图表标题"
-        @input="store.updateTitle($event)"
       />
     </div>
 

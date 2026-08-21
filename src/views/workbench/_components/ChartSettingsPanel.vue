@@ -8,6 +8,7 @@ import AxisSettings from './AxisSettings.vue'
 import BarColorSettings from './BarColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
 import ChartLabelSettings from './ChartLabelSettings.vue'
+import ChartTitleSettings from './ChartTitleSettings.vue'
 
 const store = useWorkbenchStore()
 const {
@@ -42,6 +43,18 @@ const diagnostic = computed(() => {
 
     <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-6" :aria-disabled="chartSettingsDisabled">
       <div class="py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+        <ChartTitleSettings
+          :key="worksheet?.id"
+          :title="chartSettings.title"
+          :font-size="chartSettings.titleFontSize"
+          :color="chartSettings.titleColor"
+          :disabled="chartSettingsDisabled"
+          @update-title="store.updateTitle"
+          @update-font-size="store.updateTitleFontSize"
+          @update-color="store.updateTitleColor"
+        />
+      </div>
+      <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <BarColorSettings
           :series="series"
           :active-scheme="activeColorScheme"

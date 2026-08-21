@@ -5,14 +5,14 @@ import type { BarChartModel } from './model'
 export type ChartExport = { blob: Blob; fileName: string }
 
 export async function exportBarChart(model: BarChartModel): Promise<ChartExport> {
-  await loadChartFont()
+  await loadChartFont(model.settings.titleFontSize)
   const canvas = document.createElement('canvas')
   canvas.width = 1600
   canvas.height = 900
   const context = canvas.getContext('2d')
   if (!context) throw new Error('当前浏览器无法创建图片画布。')
 
-  context.font = `700 28px "${CHART_FONT}"`
+  context.font = `700 ${model.settings.titleFontSize}px "${CHART_FONT}"`
   if (context.measureText(model.title).width > 1480) {
     throw new Error('图表标题过长，无法完整放入导出图片。')
   }
@@ -51,7 +51,7 @@ export function sanitizeFileName(title: string) {
   return normalized || 'quick-paint-chart'
 }
 
-async function loadChartFont() {
+async function loadChartFont(titleFontSize: number) {
   if (!document.fonts) return
   let timeoutId = 0
   try {
@@ -61,7 +61,7 @@ async function loadChartFont() {
     const loaded = await Promise.race([
       Promise.all([
         document.fonts.load(`400 16px "${CHART_FONT}"`, '图表数据'),
-        document.fonts.load(`700 28px "${CHART_FONT}"`, '图表标题'),
+        document.fonts.load(`700 ${titleFontSize}px "${CHART_FONT}"`, '图表标题'),
       ]),
       timeout,
     ])

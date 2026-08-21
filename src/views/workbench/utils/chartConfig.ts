@@ -58,8 +58,8 @@ export function createBarChartConfig(
         title: {
           display: true,
           text: model.title,
-          color: '#172033',
-          font: { family: CHART_FONT, size: options.forExport ? 28 : 18, weight: 700 },
+          color: model.settings.titleColor,
+          font: { family: CHART_FONT, size: model.settings.titleFontSize, weight: 700 },
           padding: { bottom: options.forExport ? 26 : 18 },
         },
         tooltip: {

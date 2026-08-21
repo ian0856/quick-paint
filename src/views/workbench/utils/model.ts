@@ -72,6 +72,9 @@ export type YAxisTickIntervalMode = 'auto' | 'fixed'
 export type ChartSettings = {
   baseColorSchemeId: BarColorSchemeId
   maxBarThickness: number
+  title: string
+  titleFontSize: number
+  titleColor: string
   xAxisName: string
   yAxisName: string
   xAxisNameFontSize: number

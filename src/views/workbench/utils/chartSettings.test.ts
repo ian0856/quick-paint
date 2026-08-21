@@ -12,6 +12,9 @@ describe('chart settings', () => {
   test('uses visible axis names and the existing tick appearance by default', () => {
     expect(createDefaultChartSettings()).toMatchObject({
       xAxisName: 'x轴',
+      title: '',
+      titleFontSize: 18,
+      titleColor: '#172033',
       yAxisName: 'y轴',
       xAxisNameFontSize: 12,
       yAxisNameFontSize: 12,

@@ -68,7 +68,6 @@ export function resolveBarChart(
   worksheet: WorksheetInterpretation,
   xAxisFieldId: FieldId | null,
   yAxisFields: readonly YAxisFieldSelection[],
-  title: string,
   settings: ChartSettings = createDefaultChartSettings(),
 ): ChartResolution {
   if (worksheet.recordCount > LIMITS.chartRecords) {
@@ -137,7 +136,7 @@ export function resolveBarChart(
     ? { ...settings, yAxisTickIntervalMode: 'auto' as const }
     : settings
   const chart: BarChartModel = {
-    title: title.trim() || '未命名图表',
+    title: settings.title.trim() || '未命名图表',
     xAxisFieldId,
     labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
     series,

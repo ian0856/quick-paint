@@ -16,6 +16,7 @@ import {
   MAX_AXIS_NAME_LENGTH,
   MAX_AXIS_UNIT_LENGTH,
   MAX_CHART_FONT_SIZE,
+  MAX_CHART_TITLE_LENGTH,
   MAX_MAX_BAR_THICKNESS,
   MIN_CHART_FONT_SIZE,
   MIN_MAX_BAR_THICKNESS,
@@ -53,7 +54,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   const xAxisFieldId = shallowRef<FieldId | null>(null)
   const yAxisFields = shallowRef<YAxisFieldSelection[]>([])
   const chartSettings = shallowRef<ChartSettings>(createDefaultChartSettings())
-  const title = shallowRef('')
   const viewMode = shallowRef<ViewMode>('chart')
   const isParsing = shallowRef(false)
   const parseFailure = shallowRef<ParseFailure | null>(null)
@@ -95,7 +95,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       worksheet,
       xAxisFieldId.value,
       yAxisFields.value,
-      title.value,
       chartSettings.value,
     )
   })
@@ -187,7 +186,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       yAxisFields.value = []
       chartSettings.value = createDefaultChartSettings()
       fieldColors = new Map()
-      title.value = ''
       return
     }
     const savedMapping = worksheetMappings.get(worksheet.id)
@@ -199,7 +197,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     }
     else {
       const mapping = inferUniqueMapping(worksheet)
-      chartSettings.value = createDefaultChartSettings()
+      chartSettings.value = { ...createDefaultChartSettings(), title: worksheet.name }
       fieldColors = new Map()
       xAxisFieldId.value = mapping.xAxisFieldId
       yAxisFields.value = mapping.yAxisFieldIds.map((fieldId, index) => ({
@@ -209,7 +207,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       for (const field of yAxisFields.value) fieldColors.set(field.fieldId, field.color)
       saveWorksheetMapping()
     }
-    title.value = worksheet.name
     viewMode.value = 'chart'
     exportError.value = null
     exportSuccess.value = false
@@ -295,10 +292,22 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   }
 
   function updateTitle(nextTitle: string) {
-    title.value = nextTitle
-    exportError.value = null
-    exportSuccess.value = false
-    rememberValidChart()
+    if (nextTitle.length > MAX_CHART_TITLE_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, title: nextTitle }
+    finishChartChange()
+  }
+
+  function updateTitleFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, titleFontSize: value }
+    finishChartChange()
+  }
+
+  function updateTitleColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, titleColor: color }
+    finishChartChange()
   }
 
   function selectBarColorScheme(id: BarColorSchemeId) {
@@ -486,7 +495,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     xAxisFieldId,
     yAxisFields,
     chartSettings,
-    title,
     viewMode,
     isParsing,
     parseFailure,
@@ -511,6 +519,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     selectYAxisFields,
     reorderYAxisFields,
     updateTitle,
+    updateTitleFontSize,
+    updateTitleColor,
     selectBarColorScheme,
     updateValueSeriesColor,
     updateMaxBarThickness,

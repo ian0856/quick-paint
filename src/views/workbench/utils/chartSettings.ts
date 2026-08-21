@@ -32,8 +32,11 @@ export const MIN_MAX_BAR_THICKNESS = 8
 export const MAX_MAX_BAR_THICKNESS = 120
 export const MAX_AXIS_NAME_LENGTH = 60
 export const MAX_AXIS_UNIT_LENGTH = 20
+export const MAX_CHART_TITLE_LENGTH = 120
 export const MIN_CHART_FONT_SIZE = 8
 export const MAX_CHART_FONT_SIZE = 32
+export const DEFAULT_CHART_TITLE_FONT_SIZE = 18
+export const DEFAULT_CHART_TITLE_COLOR = '#172033'
 export const DEFAULT_AXIS_NAME_FONT_SIZE = 12
 export const DEFAULT_AXIS_NAME_COLOR = '#344054'
 export const DEFAULT_CHART_LABEL_FONT_SIZE = 11
@@ -45,6 +48,9 @@ export function createDefaultChartSettings(): ChartSettings {
   return {
     baseColorSchemeId: 'classic',
     maxBarThickness: DEFAULT_MAX_BAR_THICKNESS,
+    title: '',
+    titleFontSize: DEFAULT_CHART_TITLE_FONT_SIZE,
+    titleColor: DEFAULT_CHART_TITLE_COLOR,
     xAxisName: 'x轴',
     yAxisName: 'y轴',
     xAxisNameFontSize: DEFAULT_AXIS_NAME_FONT_SIZE,

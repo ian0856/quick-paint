@@ -13,6 +13,9 @@ describe('createBarChartConfig', () => {
       settings: {
         ...createDefaultChartSettings(),
         maxBarThickness: 72,
+        title: '销售',
+        titleFontSize: 24,
+        titleColor: '#010203',
         xAxisName: '地区',
         yAxisName: '金额',
         xAxisNameFontSize: 16,
@@ -35,6 +38,11 @@ describe('createBarChartConfig', () => {
       backgroundColor: '#123456',
       borderColor: '#123456',
       maxBarThickness: 72,
+    })
+    expect(config.options?.plugins?.title).toMatchObject({
+      text: '销售',
+      color: '#010203',
+      font: { size: 24 },
     })
     expect(config.options?.scales?.x).toMatchObject({
       title: { display: true, text: '地区', color: '#778899', font: { size: 16 } },
