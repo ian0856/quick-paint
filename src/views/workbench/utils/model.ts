@@ -67,30 +67,40 @@ export type ViewMode = 'chart' | 'table'
 
 export type BarColorSchemeId = 'classic' | 'contrast' | 'soft'
 export type BarColorSchemeSelection = BarColorSchemeId | 'custom'
-export type ValueAxisTickIntervalMode = 'auto' | 'fixed'
+export type YAxisTickIntervalMode = 'auto' | 'fixed'
 
 export type ChartSettings = {
   baseColorSchemeId: BarColorSchemeId
   maxBarThickness: number
-  categoryAxisName: string
-  valueAxisName: string
-  valueAxisTickIntervalMode: ValueAxisTickIntervalMode
-  fixedValueAxisTickInterval: number
+  xAxisName: string
+  yAxisName: string
+  xAxisNameFontSize: number
+  yAxisNameFontSize: number
+  xAxisNameColor: string
+  yAxisNameColor: string
+  yAxisUnit: string
+  chartLabelFontSize: number
+  xAxisTickLabelFontSize: number
+  yAxisTickLabelFontSize: number
+  xAxisTickLabelColor: string
+  yAxisTickLabelColor: string
+  yAxisTickIntervalMode: YAxisTickIntervalMode
+  fixedYAxisTickInterval: number
 }
 
-export type ValueFieldSelection = {
+export type YAxisFieldSelection = {
   fieldId: FieldId
   color: string
 }
 
-export type ValueSeries = ValueFieldSelection & {
+export type ValueSeries = YAxisFieldSelection & {
   fieldName: string
   values: Array<number | null>
 }
 
 export type BarChartModel = {
   title: string
-  categoryFieldId: FieldId
+  xAxisFieldId: FieldId
   labels: string[]
   series: ValueSeries[]
   settings: ChartSettings
@@ -112,6 +122,6 @@ export const LIMITS = {
   worksheetFields: 200,
   worksheetCells: 1_000_000,
   chartRecords: 100,
-  chartValueFields: 5,
+  chartYAxisFields: 5,
   sourceValueCharacters: 32_767,
 } as const

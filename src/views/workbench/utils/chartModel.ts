@@ -5,14 +5,14 @@ import type {
   FieldId,
   SourceCell,
   SourceField,
-  ValueFieldSelection,
+  YAxisFieldSelection,
   WorksheetInterpretation,
 } from './model'
 import { LIMITS } from './model'
 import {
   createDefaultChartSettings,
-  validateFixedValueAxisTickInterval,
-  valueAxisSpan,
+  validateFixedYAxisTickInterval,
+  yAxisSpan,
 } from './chartSettings'
 
 const STRICT_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
@@ -31,43 +31,43 @@ export function numericCellValue(cell: SourceCell): number | null {
   return Number.isFinite(value) ? value : null
 }
 
-export function categoryUnavailableReason(field: SourceField, valueFieldIds: readonly FieldId[]) {
-  if (valueFieldIds.includes(field.id)) return '同一字段不能同时用作分类和值'
+export function xAxisFieldUnavailableReason(field: SourceField, yAxisFieldIds: readonly FieldId[]) {
+  if (yAxisFieldIds.includes(field.id)) return '同一字段不能同时用作x轴字段和y轴字段'
   if (field.profile.errorCount > 0) return '包含错误或没有保存结果的公式'
   if (field.values.every((cell) => cell.kind === 'missing')) return '该字段全部为空'
   return null
 }
 
-export function valueUnavailableReason(field: SourceField, categoryFieldId: FieldId | null) {
-  if (field.id === categoryFieldId) return '同一字段不能同时用作分类和值'
+export function yAxisFieldUnavailableReason(field: SourceField, xAxisFieldId: FieldId | null) {
+  if (field.id === xAxisFieldId) return '同一字段不能同时用作x轴字段和y轴字段'
   if (!field.profile.numericRoleEligible) return '包含不能转换为数值的内容'
   return null
 }
 
-export function defaultValueFieldIds(
+export function defaultYAxisFieldIds(
   worksheet: WorksheetInterpretation,
-  categoryFieldId: FieldId | null,
+  xAxisFieldId: FieldId | null,
 ) {
-  if (categoryFieldId === null) return []
+  if (xAxisFieldId === null) return []
   return worksheet.fields
-    .filter((field) => !valueUnavailableReason(field, categoryFieldId))
-    .slice(0, LIMITS.chartValueFields)
+    .filter((field) => !yAxisFieldUnavailableReason(field, xAxisFieldId))
+    .slice(0, LIMITS.chartYAxisFields)
     .map((field) => field.id)
 }
 
 export function inferUniqueMapping(worksheet: WorksheetInterpretation) {
-  const categoryFieldId = worksheet.fields[0]?.id ?? null
+  const xAxisFieldId = worksheet.fields[0]?.id ?? null
 
   return {
-    categoryFieldId,
-    valueFieldIds: defaultValueFieldIds(worksheet, categoryFieldId),
+    xAxisFieldId,
+    yAxisFieldIds: defaultYAxisFieldIds(worksheet, xAxisFieldId),
   }
 }
 
 export function resolveBarChart(
   worksheet: WorksheetInterpretation,
-  categoryFieldId: FieldId | null,
-  valueFields: readonly ValueFieldSelection[],
+  xAxisFieldId: FieldId | null,
+  yAxisFields: readonly YAxisFieldSelection[],
   title: string,
   settings: ChartSettings = createDefaultChartSettings(),
 ): ChartResolution {
@@ -81,33 +81,33 @@ export function resolveBarChart(
       },
     }
   }
-  if (categoryFieldId === null) {
+  if (xAxisFieldId === null) {
     return {
       valid: false,
       chart: null,
-      diagnostic: { code: 'mapping-required', message: '请选择分类字段。' },
+      diagnostic: { code: 'mapping-required', message: '请选择x轴字段。' },
     }
   }
-  if (valueFields.length === 0) {
+  if (yAxisFields.length === 0) {
     return {
       valid: false,
       chart: null,
-      diagnostic: { code: 'mapping-required', message: '请选择至少一个数值字段。' },
+      diagnostic: { code: 'mapping-required', message: '请选择至少一个y轴字段。' },
     }
   }
 
-  const categoryField = worksheet.fields.find((field) => field.id === categoryFieldId)
-  const valueFieldIds = valueFields.map((field) => field.fieldId)
-  const selectedFields = valueFields.map((selection) => ({
+  const xAxisField = worksheet.fields.find((field) => field.id === xAxisFieldId)
+  const yAxisFieldIds = yAxisFields.map((field) => field.fieldId)
+  const selectedYAxisFields = yAxisFields.map((selection) => ({
     selection,
     field: worksheet.fields.find((field) => field.id === selection.fieldId),
   }))
   if (
-    !categoryField ||
-    valueFields.length > LIMITS.chartValueFields ||
-    new Set(valueFieldIds).size !== valueFieldIds.length ||
-    categoryUnavailableReason(categoryField, valueFieldIds) ||
-    selectedFields.some(({ field }) => !field || valueUnavailableReason(field, categoryFieldId))
+    !xAxisField ||
+    yAxisFields.length > LIMITS.chartYAxisFields ||
+    new Set(yAxisFieldIds).size !== yAxisFieldIds.length ||
+    xAxisFieldUnavailableReason(xAxisField, yAxisFieldIds) ||
+    selectedYAxisFields.some(({ field }) => !field || yAxisFieldUnavailableReason(field, xAxisFieldId))
   ) {
     return {
       valid: false,
@@ -116,7 +116,7 @@ export function resolveBarChart(
     }
   }
 
-  const series = selectedFields.map(({ selection, field }) => ({
+  const series = selectedYAxisFields.map(({ selection, field }) => ({
     ...selection,
     fieldName: field!.label,
     values: field!.values.map(numericCellValue),
@@ -125,21 +125,21 @@ export function resolveBarChart(
     return {
       valid: false,
       chart: null,
-      diagnostic: { code: 'no-values', message: '所选数值字段没有可绘制的数据。' },
+      diagnostic: { code: 'no-values', message: '所选y轴字段没有可绘制的数据。' },
     }
   }
 
-  const intervalValidation = validateFixedValueAxisTickInterval(
-    String(settings.fixedValueAxisTickInterval),
-    valueAxisSpan(series),
+  const intervalValidation = validateFixedYAxisTickInterval(
+    String(settings.fixedYAxisTickInterval),
+    yAxisSpan(series),
   )
-  const effectiveSettings = settings.valueAxisTickIntervalMode === 'fixed' && !intervalValidation.valid
-    ? { ...settings, valueAxisTickIntervalMode: 'auto' as const }
+  const effectiveSettings = settings.yAxisTickIntervalMode === 'fixed' && !intervalValidation.valid
+    ? { ...settings, yAxisTickIntervalMode: 'auto' as const }
     : settings
   const chart: BarChartModel = {
     title: title.trim() || '未命名图表',
-    categoryFieldId,
-    labels: categoryField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
+    xAxisFieldId,
+    labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
     series,
     settings: { ...effectiveSettings },
   }

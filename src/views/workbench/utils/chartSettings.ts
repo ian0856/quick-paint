@@ -2,7 +2,7 @@ import type {
   BarColorSchemeId,
   BarColorSchemeSelection,
   ChartSettings,
-  ValueFieldSelection,
+  YAxisFieldSelection,
 } from './model'
 
 export const BAR_COLOR_SCHEMES = [
@@ -31,16 +31,34 @@ export const DEFAULT_MAX_BAR_THICKNESS = 56
 export const MIN_MAX_BAR_THICKNESS = 8
 export const MAX_MAX_BAR_THICKNESS = 120
 export const MAX_AXIS_NAME_LENGTH = 60
-export const MAX_VALUE_AXIS_TICK_INTERVALS = 200
+export const MAX_AXIS_UNIT_LENGTH = 20
+export const MIN_CHART_FONT_SIZE = 8
+export const MAX_CHART_FONT_SIZE = 32
+export const DEFAULT_AXIS_NAME_FONT_SIZE = 12
+export const DEFAULT_AXIS_NAME_COLOR = '#344054'
+export const DEFAULT_CHART_LABEL_FONT_SIZE = 11
+export const DEFAULT_AXIS_TICK_LABEL_FONT_SIZE = 11
+export const DEFAULT_AXIS_TICK_LABEL_COLOR = '#667085'
+export const MAX_Y_AXIS_TICK_INTERVALS = 200
 
 export function createDefaultChartSettings(): ChartSettings {
   return {
     baseColorSchemeId: 'classic',
     maxBarThickness: DEFAULT_MAX_BAR_THICKNESS,
-    categoryAxisName: '',
-    valueAxisName: '',
-    valueAxisTickIntervalMode: 'auto',
-    fixedValueAxisTickInterval: 1,
+    xAxisName: 'x轴',
+    yAxisName: 'y轴',
+    xAxisNameFontSize: DEFAULT_AXIS_NAME_FONT_SIZE,
+    yAxisNameFontSize: DEFAULT_AXIS_NAME_FONT_SIZE,
+    xAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
+    yAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
+    yAxisUnit: '',
+    chartLabelFontSize: DEFAULT_CHART_LABEL_FONT_SIZE,
+    xAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
+    yAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
+    xAxisTickLabelColor: DEFAULT_AXIS_TICK_LABEL_COLOR,
+    yAxisTickLabelColor: DEFAULT_AXIS_TICK_LABEL_COLOR,
+    yAxisTickIntervalMode: 'auto',
+    fixedYAxisTickInterval: 1,
   }
 }
 
@@ -49,21 +67,21 @@ export function colorsForScheme(id: BarColorSchemeId): readonly string[] {
 }
 
 export function recognizeColorScheme(
-  valueFields: readonly ValueFieldSelection[],
+  yAxisFields: readonly YAxisFieldSelection[],
 ): BarColorSchemeSelection {
   const matching = BAR_COLOR_SCHEMES.find(scheme =>
-    valueFields.every((field, index) => sameColor(field.color, scheme.colors[index]!)),
+    yAxisFields.every((field, index) => sameColor(field.color, scheme.colors[index]!)),
   )
   return matching?.id ?? 'custom'
 }
 
 export function firstAvailableSeriesColor(
   schemeId: BarColorSchemeId,
-  valueFields: readonly ValueFieldSelection[],
+  yAxisFields: readonly YAxisFieldSelection[],
 ): string {
-  const usedColors = new Set(valueFields.map(field => field.color.toUpperCase()))
+  const usedColors = new Set(yAxisFields.map(field => field.color.toUpperCase()))
   return colorsForScheme(schemeId).find(color => !usedColors.has(color))
-    ?? colorsForScheme(schemeId)[valueFields.length % colorsForScheme(schemeId).length]!
+    ?? colorsForScheme(schemeId)[yAxisFields.length % colorsForScheme(schemeId).length]!
 }
 
 export function normalizeHexColor(value: string): string | null {
@@ -74,9 +92,9 @@ export type FixedIntervalValidation =
   | { valid: true; value: number }
   | { valid: false; message: string }
 
-export function validateFixedValueAxisTickInterval(
+export function validateFixedYAxisTickInterval(
   input: string,
-  valueSpan: number,
+  yAxisSpan: number,
 ): FixedIntervalValidation {
   const normalized = input.trim()
   if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(normalized)) {
@@ -87,13 +105,13 @@ export function validateFixedValueAxisTickInterval(
   if (!Number.isFinite(value) || value <= 0) {
     return { valid: false, message: '间隔必须大于 0。' }
   }
-  if (valueSpan > 0 && valueSpan / value > MAX_VALUE_AXIS_TICK_INTERVALS) {
-    return { valid: false, message: `当前数据最多生成 ${MAX_VALUE_AXIS_TICK_INTERVALS} 个刻度区间。` }
+  if (yAxisSpan > 0 && yAxisSpan / value > MAX_Y_AXIS_TICK_INTERVALS) {
+    return { valid: false, message: `当前数据最多生成 ${MAX_Y_AXIS_TICK_INTERVALS} 个刻度区间。` }
   }
   return { valid: true, value }
 }
 
-export function valueAxisSpan(series: ReadonlyArray<{ values: readonly (number | null)[] }>): number {
+export function yAxisSpan(series: ReadonlyArray<{ values: readonly (number | null)[] }>): number {
   const values = series.flatMap(item => item.values.filter((value): value is number => value !== null))
   if (values.length === 0) return 0
   return Math.max(0, ...values) - Math.min(0, ...values)

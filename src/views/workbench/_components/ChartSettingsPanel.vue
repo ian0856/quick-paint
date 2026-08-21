@@ -7,21 +7,22 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
 import BarColorSettings from './BarColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
+import ChartLabelSettings from './ChartLabelSettings.vue'
 
 const store = useWorkbenchStore()
 const {
   selectedWorksheet: worksheet,
-  valueFields,
+  yAxisFields,
   chartSettings,
   chartResolution,
   sourceTableValidation,
   hasInvalidTableEdits,
   chartSettingsDisabled,
   activeColorScheme,
-  currentValueAxisSpan,
+  currentYAxisSpan,
 } = storeToRefs(store)
 
-const series = computed(() => valueFields.value.flatMap((selection) => {
+const series = computed(() => yAxisFields.value.flatMap((selection) => {
   const field = worksheet.value?.fields.find(item => item.id === selection.fieldId)
   return field ? [{ fieldId: field.id, label: field.label, color: selection.color }] : []
 }))
@@ -57,18 +58,44 @@ const diagnostic = computed(() => {
         />
       </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+        <ChartLabelSettings
+          :key="worksheet?.id"
+          :font-size="chartSettings.chartLabelFontSize"
+          :disabled="chartSettingsDisabled"
+          @update-font-size="store.updateChartLabelFontSize"
+        />
+      </div>
+      <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <AxisSettings
           :key="worksheet?.id"
-          :category-axis-name="chartSettings.categoryAxisName"
-          :value-axis-name="chartSettings.valueAxisName"
-          :interval-mode="chartSettings.valueAxisTickIntervalMode"
-          :fixed-interval="chartSettings.fixedValueAxisTickInterval"
-          :value-span="currentValueAxisSpan"
+          :x-axis-name="chartSettings.xAxisName"
+          :y-axis-name="chartSettings.yAxisName"
+          :x-axis-name-font-size="chartSettings.xAxisNameFontSize"
+          :y-axis-name-font-size="chartSettings.yAxisNameFontSize"
+          :x-axis-name-color="chartSettings.xAxisNameColor"
+          :y-axis-name-color="chartSettings.yAxisNameColor"
+          :y-axis-unit="chartSettings.yAxisUnit"
+          :x-axis-tick-label-font-size="chartSettings.xAxisTickLabelFontSize"
+          :y-axis-tick-label-font-size="chartSettings.yAxisTickLabelFontSize"
+          :x-axis-tick-label-color="chartSettings.xAxisTickLabelColor"
+          :y-axis-tick-label-color="chartSettings.yAxisTickLabelColor"
+          :interval-mode="chartSettings.yAxisTickIntervalMode"
+          :fixed-interval="chartSettings.fixedYAxisTickInterval"
+          :y-axis-span="currentYAxisSpan"
           :disabled="chartSettingsDisabled"
-          @update-category-axis-name="store.updateCategoryAxisName"
-          @update-value-axis-name="store.updateValueAxisName"
-          @update-interval-mode="store.updateValueAxisTickIntervalMode"
-          @update-fixed-interval="store.updateFixedValueAxisTickInterval"
+          @update-x-axis-name="store.updateXAxisName"
+          @update-y-axis-name="store.updateYAxisName"
+          @update-x-axis-name-font-size="store.updateXAxisNameFontSize"
+          @update-y-axis-name-font-size="store.updateYAxisNameFontSize"
+          @update-x-axis-name-color="store.updateXAxisNameColor"
+          @update-y-axis-name-color="store.updateYAxisNameColor"
+          @update-y-axis-unit="store.updateYAxisUnit"
+          @update-x-axis-tick-label-font-size="store.updateXAxisTickLabelFontSize"
+          @update-y-axis-tick-label-font-size="store.updateYAxisTickLabelFontSize"
+          @update-x-axis-tick-label-color="store.updateXAxisTickLabelColor"
+          @update-y-axis-tick-label-color="store.updateYAxisTickLabelColor"
+          @update-interval-mode="store.updateYAxisTickIntervalMode"
+          @update-fixed-interval="store.updateFixedYAxisTickInterval"
         />
       </div>
     </div>

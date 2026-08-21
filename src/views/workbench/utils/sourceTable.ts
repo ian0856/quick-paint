@@ -97,8 +97,8 @@ export function deleteSourceTableRows(
 
 export function validateSourceTable(
   worksheet: WorksheetInterpretation,
-  categoryFieldId: FieldId | null,
-  valueFieldIds: readonly FieldId[],
+  xAxisFieldId: FieldId | null,
+  yAxisFieldIds: readonly FieldId[],
 ): SourceTableValidation {
   if (worksheet.recordCount === 0) {
     return invalidTable('Source Table 至少需要保留 1 条数据。')
@@ -107,9 +107,9 @@ export function validateSourceTable(
     return invalidTable(`Source Table 最多支持 ${LIMITS.chartRecords} 条图表数据。`)
   }
 
-  const selectedValueFields = new Set(valueFieldIds)
+  const selectedYAxisFields = new Set(yAxisFieldIds)
   const cellErrors = worksheet.fields.flatMap((field) => {
-    if (!selectedValueFields.has(field.id)) return []
+    if (!selectedYAxisFields.has(field.id)) return []
     return field.values.flatMap((cell, rowIndex): SourceTableCellError[] => {
       if (cell.kind === 'missing' || numericCellValue(cell) !== null) return []
       return [{
@@ -128,15 +128,15 @@ export function validateSourceTable(
     }
   }
 
-  const categoryField = worksheet.fields.find(field => field.id === categoryFieldId)
-  if (categoryField && categoryField.values.every(cell => cell.kind === 'missing' || cell.kind === 'error')) {
-    return invalidTable('Category Field 至少需要保留一个非空值。')
+  const xAxisField = worksheet.fields.find(field => field.id === xAxisFieldId)
+  if (xAxisField && xAxisField.values.every(cell => cell.kind === 'missing' || cell.kind === 'error')) {
+    return invalidTable('X Axis Field 至少需要保留一个非空值。')
   }
 
-  for (const fieldId of valueFieldIds) {
+  for (const fieldId of yAxisFieldIds) {
     const field = worksheet.fields.find(item => item.id === fieldId)
     if (field && field.values.every(cell => numericCellValue(cell) === null)) {
-      return invalidTable(`Value Field“${field.label}”至少需要保留一个数值。`)
+      return invalidTable(`Y Axis Field“${field.label}”至少需要保留一个数值。`)
     }
   }
 

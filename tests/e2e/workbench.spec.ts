@@ -106,7 +106,7 @@ test('imports CSV, switches to the read-only table, and exports a real PNG', asy
   expect(png.byteLength).toBeGreaterThan(10_000)
 })
 
-test('uses the first field as category before selecting the default value fields', async ({ page }) => {
+test('uses the first field for the x axis before selecting the default y axis fields', async ({ page }) => {
   const ambiguousCategoryCsv = Buffer.from([
     '地区,产品,销售额,利润',
     '华东,A,86,16',
@@ -116,14 +116,14 @@ test('uses the first field as category before selecting the default value fields
   await page.goto('/workbench')
   await importFile(page, '分类待选.csv', 'text/csv', ambiguousCategoryCsv)
 
-  const valueFieldSelect = page.locator('#value-fields')
-  await expect(page.locator('label[for="category-field"] + .el-select')).toContainText('地区')
-  await expect(valueFieldSelect).toBeEnabled()
+  const yAxisFieldSelect = page.locator('#y-axis-fields')
+  await expect(page.locator('label[for="x-axis-field"] + .el-select')).toContainText('地区')
+  await expect(yAxisFieldSelect).toBeEnabled()
   await expect(page.getByText('已选择 2/5 个字段')).toBeVisible()
   await expect(page.getByRole('img', { name: '柱状图：Sheet1，共 2 条数据，2 个数值系列' })).toBeVisible()
 })
 
-test('selects the first five value fields and supports removal, append, and drag ordering', async ({ page }) => {
+test('selects the first five y axis fields and supports removal, append, and drag ordering', async ({ page }) => {
   const multiValueCsv = Buffer.from([
     '地区,销售额,利润,订单数,客单价,退款额,增长率',
     '华东,86,16,12,7.2,2,0.18',
@@ -135,16 +135,16 @@ test('selects the first five value fields and supports removal, append, and drag
 
   await expect(page.getByText('已选择 5/5 个字段')).toBeVisible()
   await expect(page.getByRole('img', { name: '柱状图：Sheet1，共 2 条数据，5 个数值系列' })).toBeVisible()
-  const orderedFields = page.getByRole('list', { name: '数值字段顺序' }).getByRole('listitem')
+  const orderedFields = page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')
   await expect(orderedFields).toHaveCount(5)
   await expect(orderedFields).toHaveText(['销售额', '利润', '订单数', '客单价', '退款额'])
 
-  await page.locator('label[for="value-fields"] + .el-select').click()
+  await page.locator('label[for="y-axis-fields"] + .el-select').click()
   await expect(page.getByRole('option', { name: '增长率' })).toBeDisabled()
   await page.keyboard.press('Escape')
 
-  await page.getByRole('button', { name: '移除数值字段：订单数' }).click()
-  await page.locator('label[for="value-fields"] + .el-select').click()
+  await page.getByRole('button', { name: '移除y轴字段：订单数' }).click()
+  await page.locator('label[for="y-axis-fields"] + .el-select').click()
   await page.getByRole('option', { name: '增长率' }).click()
   await page.keyboard.press('Escape')
   await expect(orderedFields).toHaveText(['销售额', '利润', '客单价', '退款额', '增长率'])
@@ -155,7 +155,7 @@ test('selects the first five value fields and supports removal, append, and drag
   await expect(orderedFields).toHaveText(['利润', '销售额', '客单价', '退款额', '增长率'])
 })
 
-test('restores each worksheet value field order within the current data source', async ({ page }) => {
+test('restores each worksheet y axis field order within the current data source', async ({ page }) => {
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(
     workbook,
@@ -176,7 +176,7 @@ test('restores each worksheet value field order within the current data source',
     XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
   )
 
-  const orderedFields = page.getByRole('list', { name: '数值字段顺序' }).getByRole('listitem')
+  const orderedFields = page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')
   await page.locator('[title="拖拽排序：利润"]').dragTo(orderedFields.first(), {
     targetPosition: { x: 20, y: 2 },
   })
@@ -248,18 +248,30 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(page.getByRole('button', { name: '打开高级设置' })).toBeHidden()
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeEnabled()
+  await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
+  await expect(settings.getByRole('textbox', { name: 'y轴名称' })).toHaveValue('y轴')
   await settings.getByText('柔和', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
 
-  await settings.getByRole('textbox', { name: '分类轴名称' }).fill('地区')
-  await settings.getByRole('textbox', { name: '数值轴名称' }).fill('万元')
+  await settings.getByRole('textbox', { name: 'x轴名称' }).fill('地区')
+  await settings.getByRole('textbox', { name: 'y轴名称' }).fill('销售额')
+  await settings.getByRole('textbox', { name: 'y轴单位' }).fill('万元')
+  const xAxisNameFontSize = settings.getByRole('spinbutton', { name: 'x轴名称字体大小' })
+  await xAxisNameFontSize.press('ArrowUp')
+  await expect(xAxisNameFontSize).toHaveValue('13')
+  const chartLabelFontSize = settings.getByRole('spinbutton', { name: '图表标签字体大小' })
+  await chartLabelFontSize.press('ArrowUp')
+  await expect(chartLabelFontSize).toHaveValue('12')
+  const xTickFontSize = settings.getByRole('spinbutton', { name: 'x轴刻度文本字体大小' })
+  await xTickFontSize.press('ArrowUp')
+  await expect(xTickFontSize).toHaveValue('12')
   const widthSlider = settings.getByRole('slider', { name: '最大柱宽' })
   await widthSlider.focus()
   await widthSlider.press('End')
   await expect(settings.getByText('120 px')).toBeVisible()
 
   await settings.getByText('固定', { exact: true }).click()
-  const intervalInput = settings.getByRole('textbox', { name: '固定数值轴刻度间隔' })
+  const intervalInput = settings.getByRole('textbox', { name: '固定y轴刻度间隔' })
   await intervalInput.fill('0.1')
   await expect(settings.getByRole('alert')).toContainText('最多生成 200 个刻度区间')
   await intervalInput.fill('1')
@@ -267,13 +279,17 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
 
   await page.locator('label[for="worksheet"] + .el-select').click()
   await page.getByRole('option', { name: '订单' }).click()
-  await expect(settings.getByRole('textbox', { name: '分类轴名称' })).toHaveValue('')
+  await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
 
   await page.locator('label[for="worksheet"] + .el-select').click()
   await page.getByRole('option', { name: '销售' }).click()
-  await expect(settings.getByRole('textbox', { name: '分类轴名称' })).toHaveValue('地区')
-  await expect(settings.getByRole('textbox', { name: '数值轴名称' })).toHaveValue('万元')
+  await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('地区')
+  await expect(settings.getByRole('textbox', { name: 'y轴名称' })).toHaveValue('销售额')
+  await expect(settings.getByRole('textbox', { name: 'y轴单位' })).toHaveValue('万元')
+  await expect(settings.getByRole('spinbutton', { name: 'x轴名称字体大小' })).toHaveValue('13')
+  await expect(settings.getByRole('spinbutton', { name: '图表标签字体大小' })).toHaveValue('12')
+  await expect(settings.getByRole('spinbutton', { name: 'x轴刻度文本字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(settings.getByText('120 px')).toBeVisible()
   await expect(settings.getByText('固定', { exact: true })).toBeVisible()

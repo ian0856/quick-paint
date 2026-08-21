@@ -51,7 +51,7 @@ export function createBarChartConfig(
             boxWidth: options.forExport ? 20 : 12,
             boxHeight: options.forExport ? 12 : 8,
             color: '#344054',
-            font: { family: CHART_FONT, size: options.forExport ? 14 : 11 },
+            font: { family: CHART_FONT, size: model.settings.chartLabelFontSize },
             padding: options.forExport ? 22 : 14,
           },
         },
@@ -73,17 +73,17 @@ export function createBarChartConfig(
           border: { color: '#d9dee8' },
           grid: { display: false },
           title: {
-            display: Boolean(model.settings.categoryAxisName.trim()),
-            text: model.settings.categoryAxisName.trim(),
-            color: '#344054',
-            font: { family: CHART_FONT, size: options.forExport ? 15 : 12, weight: 600 },
+            display: Boolean(model.settings.xAxisName.trim()),
+            text: model.settings.xAxisName.trim(),
+            color: model.settings.xAxisNameColor,
+            font: { family: CHART_FONT, size: model.settings.xAxisNameFontSize, weight: 600 },
           },
           ticks: {
             autoSkip: true,
             maxTicksLimit: 16,
             maxRotation: 0,
-            color: '#667085',
-            font: { family: CHART_FONT, size: options.forExport ? 13 : 11 },
+            color: model.settings.xAxisTickLabelColor,
+            font: { family: CHART_FONT, size: model.settings.xAxisTickLabelFontSize },
           },
         },
         y: {
@@ -91,16 +91,19 @@ export function createBarChartConfig(
           border: { display: false },
           grid: { color: '#e9edf3' },
           title: {
-            display: Boolean(model.settings.valueAxisName.trim()),
-            text: model.settings.valueAxisName.trim(),
-            color: '#344054',
-            font: { family: CHART_FONT, size: options.forExport ? 15 : 12, weight: 600 },
+            display: Boolean(model.settings.yAxisName.trim()),
+            text: model.settings.yAxisName.trim(),
+            color: model.settings.yAxisNameColor,
+            font: { family: CHART_FONT, size: model.settings.yAxisNameFontSize, weight: 600 },
           },
           ticks: {
-            color: '#667085',
-            font: { family: CHART_FONT, size: options.forExport ? 13 : 11 },
-            stepSize: model.settings.valueAxisTickIntervalMode === 'fixed'
-              ? model.settings.fixedValueAxisTickInterval
+            color: model.settings.yAxisTickLabelColor,
+            font: { family: CHART_FONT, size: model.settings.yAxisTickLabelFontSize },
+            callback(value) {
+              return `${this.getLabelForValue(Number(value))}${model.settings.yAxisUnit.trim()}`
+            },
+            stepSize: model.settings.yAxisTickIntervalMode === 'fixed'
+              ? model.settings.fixedYAxisTickInterval
               : undefined,
           },
         },

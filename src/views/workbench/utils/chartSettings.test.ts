@@ -1,13 +1,31 @@
 import { describe, expect, test } from 'vitest'
 import {
   firstAvailableSeriesColor,
+  createDefaultChartSettings,
   normalizeHexColor,
   recognizeColorScheme,
-  validateFixedValueAxisTickInterval,
-  valueAxisSpan,
+  validateFixedYAxisTickInterval,
+  yAxisSpan,
 } from './chartSettings'
 
 describe('chart settings', () => {
+  test('uses visible axis names and the existing tick appearance by default', () => {
+    expect(createDefaultChartSettings()).toMatchObject({
+      xAxisName: 'x轴',
+      yAxisName: 'y轴',
+      xAxisNameFontSize: 12,
+      yAxisNameFontSize: 12,
+      xAxisNameColor: '#344054',
+      yAxisNameColor: '#344054',
+      yAxisUnit: '',
+      chartLabelFontSize: 11,
+      xAxisTickLabelFontSize: 11,
+      yAxisTickLabelFontSize: 11,
+      xAxisTickLabelColor: '#667085',
+      yAxisTickLabelColor: '#667085',
+    })
+  })
+
   test('recognizes built-in schemes and reports manual combinations as custom', () => {
     expect(recognizeColorScheme([
       { fieldId: 1, color: '#2563eb' },
@@ -33,14 +51,14 @@ describe('chart settings', () => {
   })
 
   test('validates fixed intervals against syntax and the 200-interval limit', () => {
-    expect(validateFixedValueAxisTickInterval('2.5', 500)).toEqual({ valid: true, value: 2.5 })
-    expect(validateFixedValueAxisTickInterval('1e2', 500).valid).toBe(false)
-    expect(validateFixedValueAxisTickInterval('0', 500).valid).toBe(false)
-    expect(validateFixedValueAxisTickInterval('2', 500).valid).toBe(false)
+    expect(validateFixedYAxisTickInterval('2.5', 500)).toEqual({ valid: true, value: 2.5 })
+    expect(validateFixedYAxisTickInterval('1e2', 500).valid).toBe(false)
+    expect(validateFixedYAxisTickInterval('0', 500).valid).toBe(false)
+    expect(validateFixedYAxisTickInterval('2', 500).valid).toBe(false)
   })
 
   test('calculates the visible span including zero', () => {
-    expect(valueAxisSpan([{ values: [20, 40, null] }])).toBe(40)
-    expect(valueAxisSpan([{ values: [-20, 40] }])).toBe(60)
+    expect(yAxisSpan([{ values: [20, 40, null] }])).toBe(40)
+    expect(yAxisSpan([{ values: [-20, 40] }])).toBe(60)
   })
 })
