@@ -7,6 +7,8 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import BarChartView from './BarChartView.vue'
 import SourceTableView from './SourceTableView.vue'
 
+defineProps<{ viewportResetRevision: number }>()
+
 const store = useWorkbenchStore()
 const {
   dataSource,
@@ -64,9 +66,9 @@ const diagnostic = computed(() => {
         <div class="flex items-center justify-center border-b border-[#f1b8b8] bg-[#fff7f7] px-5 text-xs text-danger" role="alert">
           {{ sourceTableValidation.message }} 图表保留最后一次有效结果，修正后将自动恢复。
         </div>
-        <BarChartView :chart="chart" />
+        <BarChartView :chart="chart" :reset-revision="viewportResetRevision" />
       </div>
-      <BarChartView v-else-if="chart" :chart="chart" />
+      <BarChartView v-else-if="chart" :chart="chart" :reset-revision="viewportResetRevision" />
       <div v-else class="status-center" role="status">
         <strong class="text-sm text-text-strong">{{ diagnostic?.message }}</strong>
         <span v-if="diagnostic?.code === 'too-many-records'" class="text-xs">
