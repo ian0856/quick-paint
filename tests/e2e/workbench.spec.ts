@@ -249,6 +249,9 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(controls.getByRole('textbox', { name: '图表标题' })).toHaveCount(0)
   await expect(settings.getByRole('textbox', { name: '图表标题' })).toHaveValue('销售')
   await expect(page.getByRole('button', { name: '打开高级设置' })).toBeHidden()
+  await expect(settings.getByText('柱状图', { exact: true })).toBeVisible()
+  await expect(settings.getByText('折线样式', { exact: true })).toHaveCount(0)
+  await expect(settings.getByRole('slider', { name: '最大柱宽' })).toBeVisible()
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeEnabled()
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
@@ -277,6 +280,16 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await widthSlider.press('End')
   await expect(settings.getByText('120 px')).toBeVisible()
 
+  await settings.getByText('折线图', { exact: true }).click()
+  await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
+  await expect(page.getByRole('table', { name: '折线图数据' })).toBeAttached()
+  await expect(settings.getByRole('slider', { name: '最大柱宽' })).toHaveCount(0)
+  await expect(settings.getByText('直线', { exact: true })).toBeVisible()
+  await settings.getByText('平滑', { exact: true }).click()
+  await settings.getByText('面积', { exact: true }).click()
+  await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
+  await expect(page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')).toHaveText(['销售额', '利润'])
+
   await settings.getByText('固定', { exact: true }).click()
   const intervalInput = settings.getByRole('textbox', { name: '固定y轴刻度间隔' })
   await intervalInput.fill('0.1')
@@ -289,6 +302,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('textbox', { name: '图表标题' })).toHaveValue('订单')
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
+  await expect(page.getByRole('img', { name: '柱状图：订单，共 2 条数据，1 个数值系列' })).toBeVisible()
 
   await page.locator('label[for="worksheet"] + .el-select').click()
   await page.getByRole('option', { name: '销售' }).click()
@@ -301,9 +315,66 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('spinbutton', { name: '图表标签字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('spinbutton', { name: 'x轴刻度文本字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
+  await expect(settings.getByText('面积', { exact: true })).toBeVisible()
+  await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
+  await settings.getByText('柱状图', { exact: true }).click()
   await expect(settings.getByText('120 px')).toBeVisible()
+  await settings.getByText('折线图', { exact: true }).click()
+  await expect(settings.getByText('面积', { exact: true })).toBeVisible()
   await expect(settings.getByText('固定', { exact: true })).toBeVisible()
   await expect(settings.getByRole('button', { name: /恢复默认/ })).toHaveCount(0)
+
+  await page.getByText('表格', { exact: true }).click()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '导出 PNG' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('销售报表.png')
+  const stream = await download.createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk))
+  const png = Buffer.concat(chunks)
+  expect(png.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  expect(png.readUInt32BE(16)).toBe(1600)
+  expect(png.readUInt32BE(20)).toBe(900)
+  expect(png.byteLength).toBeGreaterThan(10_000)
+})
+
+test('keeps Line Chart settings through invalid mapping recovery and resets them for a new Data Source', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/workbench')
+  await importFile(page, '缺失值.csv', 'text/csv', Buffer.from([
+    '月份,销售额,利润',
+    '一月,10,2',
+    '二月,,3',
+    '三月,30,',
+  ].join('\n')))
+
+  const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
+  await settings.getByText('折线图', { exact: true }).click()
+  await settings.getByText('平滑', { exact: true }).click()
+  await expect(page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })).toBeVisible()
+
+  await page.getByRole('button', { name: '移除y轴字段：销售额' }).click()
+  await page.getByRole('button', { name: '移除y轴字段：利润' }).click()
+  await expect(settings.getByText('请选择至少一个y轴字段。')).toBeVisible()
+  await expect(settings.getByRole('radio', { name: '柱状图' })).toBeDisabled()
+  await expect(settings.getByRole('radio', { name: '平滑' })).toBeDisabled()
+
+  await page.locator('label[for="y-axis-fields"] + .el-select').click()
+  await page.getByRole('option', { name: '利润' }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，1 个数值系列' })).toBeVisible()
+  await expect(settings.getByRole('radio', { name: '平滑' })).toBeEnabled()
+
+  await importFile(page, '单点.csv', 'text/csv', Buffer.from([
+    '月份,销售额',
+    '一月,10',
+  ].join('\n')))
+  await expect(page.getByRole('img', { name: '柱状图：Sheet1，共 1 条数据，1 个数值系列' })).toBeVisible()
+  await expect(settings.getByText('折线样式', { exact: true })).toHaveCount(0)
+  await settings.getByText('折线图', { exact: true }).click()
+  await expect(page.getByRole('img', { name: '折线图：Sheet1，共 1 条数据，1 个数值系列' })).toBeVisible()
+  await expect(settings.getByText('直线', { exact: true })).toBeVisible()
 })
 
 test('opens responsive Chart Settings as a focus-restoring drawer', async ({ page }) => {
@@ -323,6 +394,9 @@ test('opens responsive Chart Settings as a focus-restoring drawer', async ({ pag
   await page.setViewportSize({ width: 390, height: 844 })
   await trigger.click()
   await expect(drawer).toBeVisible()
+  await expect(drawer.getByRole('radiogroup', { name: '图表类型' })).toBeVisible()
+  await drawer.getByText('折线图', { exact: true }).click()
+  await expect(drawer.getByRole('radiogroup', { name: '折线样式' })).toBeVisible()
   const drawerBox = await drawer.boundingBox()
   expect(drawerBox!.width).toBeLessThanOrEqual(390)
 })

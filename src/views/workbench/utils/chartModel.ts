@@ -1,5 +1,5 @@
 import type {
-  BarChartModel,
+  ChartModel,
   ChartSettings,
   ChartResolution,
   FieldId,
@@ -64,7 +64,7 @@ export function inferUniqueMapping(worksheet: WorksheetInterpretation) {
   }
 }
 
-export function resolveBarChart(
+export function resolveChart(
   worksheet: WorksheetInterpretation,
   xAxisFieldId: FieldId | null,
   yAxisFields: readonly YAxisFieldSelection[],
@@ -76,7 +76,7 @@ export function resolveBarChart(
       chart: null,
       diagnostic: {
         code: 'too-many-records',
-        message: `当前工作表有 ${worksheet.recordCount} 条数据，柱状图最多支持 ${LIMITS.chartRecords} 条。`,
+        message: `当前工作表有 ${worksheet.recordCount} 条数据，图表最多支持 ${LIMITS.chartRecords} 条。`,
       },
     }
   }
@@ -111,7 +111,7 @@ export function resolveBarChart(
     return {
       valid: false,
       chart: null,
-      diagnostic: { code: 'invalid-mapping', message: '当前字段组合不能生成柱状图。' },
+      diagnostic: { code: 'invalid-mapping', message: '当前字段组合不能生成图表。' },
     }
   }
 
@@ -135,7 +135,8 @@ export function resolveBarChart(
   const effectiveSettings = settings.yAxisTickIntervalMode === 'fixed' && !intervalValidation.valid
     ? { ...settings, yAxisTickIntervalMode: 'auto' as const }
     : settings
-  const chart: BarChartModel = {
+  const chart: ChartModel = {
+    type: settings.chartType,
     title: settings.title.trim() || '未命名图表',
     xAxisFieldId,
     labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),

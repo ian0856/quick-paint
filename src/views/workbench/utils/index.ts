@@ -2,12 +2,12 @@ export {
   xAxisFieldUnavailableReason,
   defaultYAxisFieldIds,
   inferUniqueMapping,
-  resolveBarChart,
+  resolveChart,
   yAxisFieldUnavailableReason,
 } from './chartModel'
-export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createBarChartConfig } from './chartConfig'
+export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createChartConfig } from './chartConfig'
 export {
-  BAR_COLOR_SCHEMES,
+  SERIES_COLOR_SCHEMES,
   DEFAULT_AXIS_NAME_COLOR,
   DEFAULT_AXIS_NAME_FONT_SIZE,
   DEFAULT_AXIS_TICK_LABEL_COLOR,
@@ -33,7 +33,7 @@ export {
   yAxisSpan,
 } from './chartSettings'
 export type { FixedIntervalValidation } from './chartSettings'
-export { downloadChart, exportBarChart, sanitizeFileName } from './chartExporter'
+export { downloadChart, exportChartImage, sanitizeFileName } from './chartExporter'
 export type { ChartExport } from './chartExporter'
 export { LIMITS } from './model'
 export { parseFile } from './parseClient'
