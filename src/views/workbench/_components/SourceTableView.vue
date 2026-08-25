@@ -7,6 +7,7 @@ import type {
   DataType,
   FocusAfterRenderEvent,
   RevoGridCustomEvent,
+  TempRange,
 } from '@revolist/vue3-datagrid'
 import { ElButton, ElIcon } from 'element-plus'
 import { computed, shallowRef, watch } from 'vue'
@@ -100,9 +101,15 @@ async function onAfterFocus(event: RevoGridCustomEvent<FocusAfterRenderEvent<Dat
   await syncSelectedRows()
 }
 
-async function onGridInteraction(event: Event) {
+function onTemporaryRangeChange(event: RevoGridCustomEvent<TempRange | null>) {
   gridElement.value = event.currentTarget as HTMLRevoGridElement
-  await syncSelectedRows()
+  if (event.detail) updateSelectedRows(event.detail.area)
+}
+
+function updateSelectedRows({ y, y1 }: { y: number, y1: number }) {
+  const start = Math.min(y, y1)
+  const end = Math.max(y, y1)
+  selectedRowIndexes.value = Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
 }
 
 async function syncSelectedRows() {
@@ -110,10 +117,7 @@ async function syncSelectedRows() {
   if (!grid || typeof grid.getSelectedRange !== 'function') return
   const range = await grid.getSelectedRange()
   if (!range) return
-  const { y, y1 } = range
-  const start = Math.min(y, y1)
-  const end = Math.max(y, y1)
-  selectedRowIndexes.value = Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
+  updateSelectedRows(range)
 }
 
 async function deleteSelectedRows() {
@@ -158,8 +162,7 @@ async function deleteSelectedRows() {
       aria-label="数据表格"
       @afteredit="onAfterEdit"
       @afterfocus="onAfterFocus"
-      @keyup="onGridInteraction"
-      @mouseup="onGridInteraction"
+      @settemprange="onTemporaryRangeChange"
     />
   </section>
 </template>
