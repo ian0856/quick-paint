@@ -1,4 +1,5 @@
 import type { ChartConfiguration, ChartDataset, ChartType, Plugin } from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 import type { ChartModel } from './model'
 
 export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
@@ -29,7 +30,7 @@ export function createChartConfig(
         ? createBarDataset(model, series)
         : createLineDataset(model, series)),
     },
-    plugins: options.forExport ? [whiteBackground] : [],
+    plugins: options.forExport ? [ChartDataLabels, whiteBackground] : [ChartDataLabels],
     options: {
       responsive: options.responsive,
       maintainAspectRatio: false,
@@ -38,6 +39,19 @@ export function createChartConfig(
       layout: { padding: options.forExport ? { top: 18, right: 28, bottom: 18, left: 16 } : 8 },
       interaction: { mode: 'index', intersect: false },
       plugins: {
+        datalabels: {
+          align: 'top',
+          anchor: 'end',
+          clamp: true,
+          clip: false,
+          color: model.settings.detailLabelColor,
+          display: model.settings.showDetails ? 'auto' : false,
+          font: { family: CHART_FONT, size: model.settings.detailLabelFontSize, weight: 600 },
+          formatter(value) {
+            return value === null ? null : `${value}${model.settings.yAxisUnit.trim()}`
+          },
+          offset: 4,
+        },
         legend: {
           display: true,
           position: 'top',
@@ -127,7 +141,7 @@ function createLineDataset(
   series: ChartModel['series'][number],
 ): ChartDataset<'line', Array<number | null>> {
   const smooth = model.settings.lineStyle === 'smooth'
-  const area = model.settings.lineStyle === 'area'
+  const area = model.settings.showLineArea
   return {
     label: series.fieldName,
     data: series.values,

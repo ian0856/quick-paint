@@ -40,6 +40,8 @@ export const DEFAULT_CHART_TITLE_COLOR = '#172033'
 export const DEFAULT_AXIS_NAME_FONT_SIZE = 12
 export const DEFAULT_AXIS_NAME_COLOR = '#344054'
 export const DEFAULT_CHART_LABEL_FONT_SIZE = 11
+export const DEFAULT_DETAIL_LABEL_FONT_SIZE = 11
+export const DEFAULT_DETAIL_LABEL_COLOR = '#344054'
 export const DEFAULT_AXIS_TICK_LABEL_FONT_SIZE = 11
 export const DEFAULT_AXIS_TICK_LABEL_COLOR = '#667085'
 export const MAX_Y_AXIS_TICK_INTERVALS = 200
@@ -48,6 +50,10 @@ export function createDefaultChartSettings(): ChartSettings {
   return {
     chartType: 'bar',
     lineStyle: 'straight',
+    showLineArea: false,
+    showDetails: false,
+    detailLabelFontSize: DEFAULT_DETAIL_LABEL_FONT_SIZE,
+    detailLabelColor: DEFAULT_DETAIL_LABEL_COLOR,
     baseColorSchemeId: 'classic',
     maxBarThickness: DEFAULT_MAX_BAR_THICKNESS,
     title: '',

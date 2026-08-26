@@ -68,12 +68,16 @@ export type ViewMode = 'chart' | 'table'
 export type SeriesColorSchemeId = 'classic' | 'contrast' | 'soft'
 export type SeriesColorSchemeSelection = SeriesColorSchemeId | 'custom'
 export type ChartType = 'bar' | 'line'
-export type LineStyle = 'straight' | 'smooth' | 'area'
+export type LineStyle = 'straight' | 'smooth'
 export type YAxisTickIntervalMode = 'auto' | 'fixed'
 
 export type ChartSettings = {
   chartType: ChartType
   lineStyle: LineStyle
+  showLineArea: boolean
+  showDetails: boolean
+  detailLabelFontSize: number
+  detailLabelColor: string
   baseColorSchemeId: SeriesColorSchemeId
   maxBarThickness: number
   title: string

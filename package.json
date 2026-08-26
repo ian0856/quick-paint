@@ -17,6 +17,7 @@
     "@panzoom/panzoom": "^4.6.2",
     "@revolist/vue3-datagrid": "4.26.2",
     "chart.js": "4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "element-plus": "^2.14.4",
     "pinia": "^4.0.3",
     "vue": "^3.5.40",

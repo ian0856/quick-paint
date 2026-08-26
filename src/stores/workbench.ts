@@ -307,6 +307,29 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateShowLineArea(showLineArea: boolean) {
+    chartSettings.value = { ...chartSettings.value, showLineArea }
+    finishChartChange()
+  }
+
+  function updateShowDetails(showDetails: boolean) {
+    chartSettings.value = { ...chartSettings.value, showDetails }
+    finishChartChange()
+  }
+
+  function updateDetailLabelFontSize(value: number) {
+    if (!isValidChartFontSize(value)) return
+    chartSettings.value = { ...chartSettings.value, detailLabelFontSize: value }
+    finishChartChange()
+  }
+
+  function updateDetailLabelColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, detailLabelColor: color }
+    finishChartChange()
+  }
+
   function updateTitleFontSize(value: number) {
     if (!isValidChartFontSize(value)) return
     chartSettings.value = { ...chartSettings.value, titleFontSize: value }
@@ -530,6 +553,10 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     reorderYAxisFields,
     updateChartType,
     updateLineStyle,
+    updateShowLineArea,
+    updateShowDetails,
+    updateDetailLabelFontSize,
+    updateDetailLabelColor,
     updateTitle,
     updateTitleFontSize,
     updateTitleColor,

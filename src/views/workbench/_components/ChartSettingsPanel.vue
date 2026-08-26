@@ -7,6 +7,7 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
 import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
+import ChartDetailSettings from './ChartDetailSettings.vue'
 import ChartLabelSettings from './ChartLabelSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
 import ChartTypeSettings from './ChartTypeSettings.vue'
@@ -47,9 +48,22 @@ const diagnostic = computed(() => {
         <ChartTypeSettings
           :chart-type="chartSettings.chartType"
           :line-style="chartSettings.lineStyle"
+          :show-line-area="chartSettings.showLineArea"
           :disabled="chartSettingsDisabled"
           @update-chart-type="store.updateChartType"
           @update-line-style="store.updateLineStyle"
+          @update-show-line-area="store.updateShowLineArea"
+        />
+      </div>
+      <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+        <ChartDetailSettings
+          :show-details="chartSettings.showDetails"
+          :font-size="chartSettings.detailLabelFontSize"
+          :color="chartSettings.detailLabelColor"
+          :disabled="chartSettingsDisabled"
+          @update-show-details="store.updateShowDetails"
+          @update-font-size="store.updateDetailLabelFontSize"
+          @update-color="store.updateDetailLabelColor"
         />
       </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
