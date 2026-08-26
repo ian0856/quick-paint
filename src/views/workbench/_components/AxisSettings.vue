@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { ElColorPicker, ElInput, ElInputNumber, ElSegmented, ElSwitch } from 'element-plus'
-import { computed, shallowRef, watch } from 'vue'
+import { ElColorPicker, ElInput, ElInputNumber, ElSwitch } from 'element-plus'
 import {
   MAX_AXIS_NAME_LENGTH,
   MAX_AXIS_UNIT_LENGTH,
   MAX_CHART_FONT_SIZE,
   MIN_CHART_FONT_SIZE,
-  validateFixedYAxisTickInterval,
-  type YAxisTickIntervalMode,
 } from '../utils'
 
-const props = defineProps<{
+defineProps<{
   axis: 'x' | 'y'
   xAxisName: string
   yAxisName: string
@@ -24,9 +21,6 @@ const props = defineProps<{
   yAxisTickLabelFontSize: number
   xAxisTickLabelColor: string
   yAxisTickLabelColor: string
-  intervalMode: YAxisTickIntervalMode
-  fixedInterval: number
-  yAxisSpan: number
   disabled: boolean
 }>()
 
@@ -43,33 +37,7 @@ const emit = defineEmits<{
   updateYAxisTickLabelFontSize: [value: number]
   updateXAxisTickLabelColor: [value: string]
   updateYAxisTickLabelColor: [value: string]
-  updateIntervalMode: [mode: YAxisTickIntervalMode]
-  updateFixedInterval: [value: number]
 }>()
-
-const intervalInput = shallowRef(String(props.fixedInterval))
-const intervalOptions = [
-  { label: '自动', value: 'auto' },
-  { label: '固定', value: 'fixed' },
-]
-const intervalValidation = computed(() =>
-  validateFixedYAxisTickInterval(intervalInput.value, props.yAxisSpan),
-)
-const intervalError = computed(() =>
-  props.intervalMode === 'fixed' && !intervalValidation.value.valid
-    ? intervalValidation.value.message
-    : null,
-)
-
-watch(() => props.fixedInterval, (value) => {
-  intervalInput.value = String(value)
-})
-
-function updateIntervalInput(value: string) {
-  intervalInput.value = value
-  const validation = intervalValidation.value
-  if (validation.valid) emit('updateFixedInterval', validation.value)
-}
 
 function updateXAxisTickLabelFontSize(value: number | undefined) {
   if (value !== undefined) emit('updateXAxisTickLabelFontSize', value)
@@ -271,27 +239,6 @@ function updateYAxisTickLabelColor(color: string | null) {
       </div>
     </div>
 
-    <span class="control-label block">y轴刻度间隔</span>
-    <ElSegmented
-      class="mt-1 w-full"
-      :model-value="intervalMode"
-      :options="intervalOptions"
-      :disabled="disabled"
-      aria-label="y轴刻度间隔模式"
-      @change="emit('updateIntervalMode', $event as YAxisTickIntervalMode)"
-    />
-
-    <div v-if="intervalMode === 'fixed'" class="mt-2">
-      <ElInput
-        :model-value="intervalInput"
-        :disabled="disabled"
-        inputmode="decimal"
-        aria-label="固定y轴刻度间隔"
-        :aria-invalid="Boolean(intervalError)"
-        @input="updateIntervalInput"
-      />
-      <p v-if="intervalError" class="m-0 mt-1 text-[11px] leading-4 text-danger" role="alert">{{ intervalError }}</p>
-    </div>
     </template>
   </section>
 </template>

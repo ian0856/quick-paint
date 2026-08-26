@@ -9,11 +9,7 @@ import type {
   WorksheetInterpretation,
 } from './model'
 import { LIMITS } from './model'
-import {
-  createDefaultChartSettings,
-  validateFixedYAxisTickInterval,
-  yAxisSpan,
-} from './chartSettings'
+import { createDefaultChartSettings } from './chartSettings'
 
 const STRICT_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i
 const NON_ZERO_LEADING_ZERO = /^[+-]?0\d/
@@ -128,19 +124,12 @@ export function resolveChart(
     }
   }
 
-  const intervalValidation = validateFixedYAxisTickInterval(
-    String(settings.fixedYAxisTickInterval),
-    yAxisSpan(series),
-  )
-  const effectiveSettings = settings.yAxisTickIntervalMode === 'fixed' && !intervalValidation.valid
-    ? { ...settings, yAxisTickIntervalMode: 'auto' as const }
-    : settings
   const chart: ChartModel = {
     title: settings.title.trim() || '未命名图表',
     xAxisFieldId,
     labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
     series,
-    settings: { ...effectiveSettings },
+    settings: { ...settings },
   }
   return { valid: true, chart, diagnostic: null }
 }

@@ -69,7 +69,6 @@ export type SeriesColorSchemeId = 'classic' | 'contrast' | 'soft'
 export type SeriesColorSchemeSelection = SeriesColorSchemeId | 'custom'
 export type ChartType = 'bar' | 'line'
 export type LineStyle = 'straight' | 'smooth'
-export type YAxisTickIntervalMode = 'auto' | 'fixed'
 
 export type ChartSettings = {
   chartType: ChartType
@@ -85,7 +84,6 @@ export type ChartSettings = {
   detailLabelFontSize: number
   detailLabelColor: string
   baseColorSchemeId: SeriesColorSchemeId
-  maxBarThickness: number
   title: string
   titleFontSize: number
   titleColor: string
@@ -101,8 +99,6 @@ export type ChartSettings = {
   yAxisTickLabelFontSize: number
   xAxisTickLabelColor: string
   yAxisTickLabelColor: string
-  yAxisTickIntervalMode: YAxisTickIntervalMode
-  fixedYAxisTickInterval: number
 }
 
 export type YAxisFieldSelection = {
