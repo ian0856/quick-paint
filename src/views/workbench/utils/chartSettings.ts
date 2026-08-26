@@ -35,6 +35,7 @@ export const MIN_CHART_FONT_SIZE = 8
 export const MAX_CHART_FONT_SIZE = 32
 export const DEFAULT_CHART_TITLE_FONT_SIZE = 18
 export const DEFAULT_CHART_TITLE_COLOR = '#172033'
+export const DEFAULT_CANVAS_COLOR = '#FFFFFF'
 export const DEFAULT_AXIS_NAME_FONT_SIZE = 12
 export const DEFAULT_AXIS_NAME_COLOR = '#344054'
 export const DEFAULT_LEGEND_FONT_SIZE = 11
@@ -62,6 +63,7 @@ export function createDefaultChartSettings(): ChartSettings {
     title: '',
     titleFontSize: DEFAULT_CHART_TITLE_FONT_SIZE,
     titleColor: DEFAULT_CHART_TITLE_COLOR,
+    canvasColor: DEFAULT_CANVAS_COLOR,
     xAxisName: 'x轴',
     yAxisName: 'y轴',
     xAxisNameFontSize: DEFAULT_AXIS_NAME_FONT_SIZE,

@@ -7,6 +7,7 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
 import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
+import ChartCanvasSettings from './ChartCanvasSettings.vue'
 import ChartDetailLabelSettings from './ChartDetailLabelSettings.vue'
 import ChartLegendSettings from './ChartLegendSettings.vue'
 import LinePointSettings from './LinePointSettings.vue'
@@ -93,6 +94,13 @@ const diagnostic = computed(() => {
                 @update-chart-type="store.updateChartType"
                 @update-line-style="store.updateLineStyle"
                 @update-area-fill="store.updateAreaFill"
+              />
+            </div>
+            <div class="border-t border-base py-5">
+              <ChartCanvasSettings
+                :color="chartSettings.canvasColor"
+                :disabled="chartSettingsDisabled"
+                @update-color="store.updateCanvasColor"
               />
             </div>
             <div class="border-t border-base py-5">

@@ -380,6 +380,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateCanvasColor(value: string) {
+    const color = normalizeHexColor(value)
+    if (!color) return
+    chartSettings.value = { ...chartSettings.value, canvasColor: color }
+    finishChartChange()
+  }
+
   function selectSeriesColorScheme(id: SeriesColorSchemeId) {
     const colors = colorsForScheme(id)
     yAxisFields.value = yAxisFields.value.map((field, index) => ({
@@ -629,6 +636,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateTitle,
     updateTitleFontSize,
     updateTitleColor,
+    updateCanvasColor,
     selectSeriesColorScheme,
     updateValueSeriesColor,
     updateSeriesGradient,

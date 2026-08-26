@@ -70,7 +70,7 @@ export function createChartOption(
 
   return {
     animation: false,
-    backgroundColor: forExport ? '#ffffff' : 'transparent',
+    backgroundColor: model.settings.canvasColor,
     textStyle: { fontFamily: CHART_FONT },
     grid: forExport
       ? { top: Math.max(132, legend.top + legend.height + 32), right: 72, bottom: 90, left: 110, containLabel: true }

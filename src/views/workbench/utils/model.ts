@@ -90,6 +90,7 @@ export type ChartSettings = {
   title: string
   titleFontSize: number
   titleColor: string
+  canvasColor: string
   xAxisName: string
   yAxisName: string
   xAxisNameFontSize: number

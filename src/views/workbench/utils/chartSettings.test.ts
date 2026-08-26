@@ -27,6 +27,7 @@ describe('chart settings', () => {
       title: '',
       titleFontSize: 18,
       titleColor: '#172033',
+      canvasColor: '#FFFFFF',
       yAxisName: 'y轴',
       xAxisNameFontSize: 12,
       yAxisNameFontSize: 12,

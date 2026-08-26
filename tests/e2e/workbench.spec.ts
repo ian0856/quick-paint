@@ -487,7 +487,10 @@ async function setChartColor(
 ) {
   const trigger = settings.getByRole('button', { name: accessibleName })
   await trigger.click()
-  const dialog = page.getByRole('dialog').filter({ has: page.getByRole('slider', { name: 'pick hue value' }) })
+  const dialogId = await trigger.getAttribute('aria-controls')
+  if (!dialogId) throw new Error('Color picker trigger does not reference its dialog')
+  const dialog = page.locator(`[id="${dialogId}"]`)
+  await expect(dialog).toBeVisible()
   const input = dialog.locator('input:visible')
   await input.fill(color)
   await input.press('Enter')
@@ -716,6 +719,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await settings.locator('.el-switch:has(input[aria-label="显示 Y 轴分割线"]) .el-switch__core').click()
   await expect(settings.getByRole('textbox', { name: 'y轴名称' })).toHaveValue('y轴')
   await selectSettingsGroup(settings, '图形')
+  const canvasColor = settings.getByRole('button', { name: '画布颜色' })
+  await expect(canvasColor).toHaveAttribute('aria-description', /#FFFFFF/i)
   await expect(settings.getByRole('switch', { name: '圆角柱' })).not.toBeChecked()
   await settings.locator('.el-switch:has(input[aria-label="圆角柱"]) .el-switch__core').click()
   await settings.locator('.el-switch:has(input[aria-label="显示柱背景"]) .el-switch__core').click()
@@ -728,6 +733,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
 
   await settings.getByRole('textbox', { name: '图表标题' }).fill('销售报表')
+  await setChartColor(page, settings, '画布颜色', '#F0F4F8')
   await setChartColor(page, settings, '图表标题字体颜色', '#123456')
   const titleFontSize = settings.getByRole('spinbutton', { name: '图表标题字体大小' })
   await titleFontSize.press('ArrowUp')
@@ -787,6 +793,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await selectSettingsGroup(settings, 'y轴')
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).toBeChecked()
   await selectSettingsGroup(settings, '图形')
+  await expect(settings.getByRole('button', { name: '画布颜色' })).toHaveAttribute('aria-description', /#FFFFFF/i)
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '横向' })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '居中' })).toBeChecked()
@@ -811,6 +818,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('textbox', { name: 'y轴单位' })).toHaveValue('万元')
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).not.toBeChecked()
   await selectSettingsGroup(settings, '图形')
+  await expect(settings.getByRole('button', { name: '画布颜色' })).toHaveAttribute('aria-description', /#F0F4F8/i)
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '纵向' })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '靠右' })).toBeChecked()
@@ -840,7 +848,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await setChartColor(page, settings, '详情颜色：销售额', '#8B1E3F')
 
   const configuredPreview = page.locator('.chart-panel canvas')
-  for (const color of [[18, 52, 86], [52, 64, 84], [139, 30, 63]]) {
+  for (const color of [[240, 244, 248], [18, 52, 86], [52, 64, 84], [139, 30, 63]]) {
     const stats = await canvasColorStats(configuredPreview, color, { x: [0, 1], y: [0, 1] })
     expect(stats.count).toBeGreaterThan(5)
   }
@@ -871,6 +879,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
       { color: [139, 30, 63], x: [0.06, 0.98], y: [0.12, 0.88] },
     ],
   )
+  expect(pixels.corners).toEqual(Array.from({ length: 4 }, () => [240, 244, 248, 255]))
   expect(pixels.targetColorSamples[0]).toBeGreaterThan(0)
   expect(pixels.targetColorSamples[1]).toBeGreaterThan(5)
   expect(pixels.targetRegionPixels.every(count => count > 5)).toBe(true)
