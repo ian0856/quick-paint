@@ -95,6 +95,7 @@ export function createChartOption(
       },
     },
     legend: {
+      type: model.settings.legendLayout === 'horizontal' ? 'scroll' : 'plain',
       data: model.settings.chartType === 'line'
         ? model.series.map(series => ({
             name: series.fieldName,
@@ -102,7 +103,7 @@ export function createChartOption(
           }))
         : model.series.map(series => series.fieldName),
       top: legend.top,
-      width: legend.width,
+      ...(model.settings.legendLayout === 'vertical' ? { width: legend.width } : {}),
       height: legend.height,
       orient: model.settings.legendLayout,
       left: model.settings.legendPosition,

@@ -24,6 +24,40 @@ async function selectSettingsGroup(settings: Locator, name: '图形' | 'x轴' | 
   await expect(button).toHaveAttribute('aria-current', 'page')
 }
 
+async function expectHorizontalLegendRow(canvas: Locator) {
+  await expect.poll(async () => {
+    const markerRanges = await canvas.evaluate((element) => {
+      const context = (element as HTMLCanvasElement).getContext('2d')!
+      const { width, height } = context.canvas
+      const maxY = Math.ceil(height * 0.1)
+      const pixels = context.getImageData(0, 0, width, maxY).data
+      const colors = [[37, 99, 235], [217, 119, 6], [5, 150, 105], [220, 38, 38]]
+      return colors.map((color) => {
+        let minY = maxY
+        let maxMarkerY = -1
+        for (let y = 0; y < maxY; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const index = (y * width + x) * 4
+            if (
+              Math.abs(pixels[index]! - color[0]!) <= 8
+              && Math.abs(pixels[index + 1]! - color[1]!) <= 8
+              && Math.abs(pixels[index + 2]! - color[2]!) <= 8
+            ) {
+              minY = Math.min(minY, y)
+              maxMarkerY = Math.max(maxMarkerY, y)
+            }
+          }
+        }
+        return { minY, maxY: maxMarkerY }
+      })
+    })
+    return {
+      allVisible: markerRanges.every(range => range.maxY >= range.minY),
+      rowCount: new Set(markerRanges.map(range => `${range.minY}:${range.maxY}`)).size,
+    }
+  }).toEqual({ allVisible: true, rowCount: 1 })
+}
+
 test('keeps every horizontal Legend item on the same row', async ({ page }) => {
   await page.goto('/workbench')
   await importFile(page, '区域销售.csv', 'text/csv', Buffer.from([
@@ -33,34 +67,11 @@ test('keeps every horizontal Legend item on the same row', async ({ page }) => {
 
   const canvas = page.locator('.chart-panel canvas')
   await expect(canvas).toBeVisible()
-  const markerRanges = await canvas.evaluate((element) => {
-    const context = (element as HTMLCanvasElement).getContext('2d')!
-    const { width, height } = context.canvas
-    const maxY = Math.ceil(height * 0.1)
-    const pixels = context.getImageData(0, 0, width, maxY).data
-    const colors = [[37, 99, 235], [217, 119, 6], [5, 150, 105], [220, 38, 38]]
-    return colors.map((color) => {
-      let minY = maxY
-      let maxMarkerY = -1
-      for (let y = 0; y < maxY; y += 1) {
-        for (let x = 0; x < width; x += 1) {
-          const index = (y * width + x) * 4
-          if (
-            Math.abs(pixels[index]! - color[0]!) <= 8
-            && Math.abs(pixels[index + 1]! - color[1]!) <= 8
-            && Math.abs(pixels[index + 2]! - color[2]!) <= 8
-          ) {
-            minY = Math.min(minY, y)
-            maxMarkerY = Math.max(maxMarkerY, y)
-          }
-        }
-      }
-      return { minY, maxY: maxMarkerY }
-    })
-  })
+  await expectHorizontalLegendRow(canvas)
 
-  expect(markerRanges.every(range => range.maxY >= range.minY)).toBe(true)
-  expect(new Set(markerRanges.map(range => `${range.minY}:${range.maxY}`)).size).toBe(1)
+  await page.getByText('折线图', { exact: true }).click()
+  await expect(page.getByRole('img', { name: '折线图：Sheet1，共 1 条数据，4 个数值系列' })).toBeVisible()
+  await expectHorizontalLegendRow(canvas)
 })
 
 test('imports CSV, switches to the read-only table, and exports a real PNG', async ({ page }) => {

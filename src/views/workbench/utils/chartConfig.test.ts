@@ -92,6 +92,7 @@ describe('createChartOption Bar Chart behavior', () => {
     model.settings = { ...model.settings, legendLayout, legendPosition }
 
     expect(createChartOption(model).legend).toMatchObject({
+      type: legendLayout === 'horizontal' ? 'scroll' : 'plain',
       orient: legendLayout,
       left: legendPosition,
       align: 'left',
@@ -120,14 +121,14 @@ describe('createChartOption Bar Chart behavior', () => {
     const horizontal = createChartOption(model, { chartWidth: 520 })
     model.settings = { ...model.settings, legendLayout: 'vertical' }
     const vertical = createChartOption(model, { chartWidth: 520 })
-    const horizontalLegend = horizontal.legend as { data: unknown[], top: number, width: number, height: number }
+    const horizontalLegend = horizontal.legend as { data: unknown[], top: number, width?: number, height: number }
     const verticalLegend = vertical.legend as { data: unknown[], top: number, width: number, height: number }
     const horizontalGrid = horizontal.grid as { top: number }
     const verticalGrid = vertical.grid as { top: number }
 
     expect(horizontalLegend.data).toEqual(fieldNames)
     expect(verticalLegend.data).toEqual(fieldNames)
-    expect(horizontalLegend.width).toBeGreaterThan(448)
+    expect(horizontalLegend.width).toBeUndefined()
     expect(horizontalLegend.height).toBe(17)
     expect(verticalLegend.height).toBeGreaterThan(horizontalLegend.height)
     expect(horizontalGrid.top).toBeGreaterThanOrEqual(horizontalLegend.top + horizontalLegend.height + 24)
@@ -181,7 +182,7 @@ describe('createChartOption Bar Chart behavior', () => {
     }
 
     expect(fieldNames.map(legend.formatter)).toEqual(fieldNames)
-    expect(legend.width).toBe(212)
+    expect(legend.width).toBeUndefined()
     expect(legend.height).toBe(17)
     expect(legend.padding).toBe(0)
   })
