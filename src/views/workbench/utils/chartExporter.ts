@@ -38,6 +38,7 @@ export async function exportChartImage(model: ChartModel): Promise<ChartExport> 
     const blob = dataUrlToPng(chart.getDataURL({
       type: 'png',
       pixelRatio: 1,
+      backgroundColor: 'transparent',
     }))
     if (blob.size === 0) throw new Error('PNG 编码失败。')
     return { blob, fileName: `${sanitizeFileName(model.title)}.png` }

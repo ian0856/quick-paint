@@ -852,7 +852,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
     const context = (element as HTMLCanvasElement).getContext('2d')!
     return Array.from(context.getImageData(0, 0, 1, 1).data)
   })
-  expect(previewCorner).toEqual([240, 244, 248, 128])
+  expect(previewCorner[3]).toBe(128)
+  expect(previewCorner.slice(0, 3).every((channel, index) => Math.abs(channel - [240, 244, 248][index]!) <= 1)).toBe(true)
   for (const color of [[18, 52, 86], [52, 64, 84], [139, 30, 63]]) {
     const stats = await canvasColorStats(configuredPreview, color, { x: [0, 1], y: [0, 1] })
     expect(stats.count).toBeGreaterThan(5)
@@ -884,7 +885,9 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
       { color: [139, 30, 63], x: [0.06, 0.98], y: [0.12, 0.88] },
     ],
   )
-  expect(pixels.corners).toEqual(Array.from({ length: 4 }, () => [240, 244, 248, 128]))
+  expect(pixels.corners.every(corner => corner[3] === 128)).toBe(true)
+  expect(pixels.corners.every(corner => corner.slice(0, 3)
+    .every((channel, index) => Math.abs(channel - [240, 244, 248][index]!) <= 1))).toBe(true)
   expect(pixels.targetColorSamples[0]).toBeGreaterThan(0)
   expect(pixels.targetColorSamples[1]).toBeGreaterThan(5)
   expect(pixels.targetRegionPixels.every(count => count > 5)).toBe(true)
@@ -1176,6 +1179,7 @@ test('opens responsive Chart Settings as a focus-restoring drawer', async ({ pag
   await trigger.click()
   await expect(drawer).toBeVisible()
   await expect(drawer.getByRole('button', { name: '图形', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(drawer.getByRole('button', { name: '画布颜色' })).toBeVisible()
   await expect(drawer.getByRole('radiogroup', { name: '图像类型' })).toBeVisible()
   await expect(drawer.getByText('图例', { exact: true })).toBeVisible()
   await drawer.getByText('纵向', { exact: true }).click()

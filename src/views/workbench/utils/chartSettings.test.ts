@@ -10,7 +10,7 @@ import {
 } from './chartSettings'
 
 describe('chart settings', () => {
-  test('uses visible axis names and the existing tick appearance by default', () => {
+  test('uses explicit appearance defaults', () => {
     expect(createDefaultChartSettings()).toMatchObject({
       lineStyle: 'straight',
       areaFill: false,

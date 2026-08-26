@@ -11,7 +11,7 @@ vi.mock('../views/workbench/utils', async (importOriginal) => ({
 
 const mockedParseFile = vi.mocked(parseFile)
 
-describe('workbench Field-scoped Detail Label color and Legend settings', () => {
+describe('workbench Worksheet-scoped Chart Settings', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
