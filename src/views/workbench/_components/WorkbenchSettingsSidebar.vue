@@ -43,7 +43,7 @@ const isCollapsed = shallowRef(false)
 
 <style scoped>
 .settings-sidebar {
-  width: 27.5rem;
+  width: 36rem;
   transition: width 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
