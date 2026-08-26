@@ -94,6 +94,7 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(createChartOption(model).legend).toMatchObject({
       orient: legendLayout,
       left: legendPosition,
+      align: 'left',
     })
   })
 

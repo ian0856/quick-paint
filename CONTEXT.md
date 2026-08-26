@@ -48,6 +48,10 @@ _Avoid_: Category axis
 The vertical axis of the Chart, whose scale represents the values from all selected Y Axis Fields.
 _Avoid_: Value axis, numeric axis
 
+**Y Axis Unit**:
+Optional text describing the unit of the Y Axis values. Its selected configurable display locations may include Detail Labels, Y Axis tick labels, and an independent `单位：{unit}` label above the upper end of the Y Axis; when present, the unit also appears in the Chart tooltip independently of those selections.
+_Avoid_: Y Axis split-line unit
+
 **Bar**:
 The visual mark for one Value Series value from one Record. Bars in the same Value Series share one color across all Records and have square ends by default; when rounded, each Bar has a semicircular end away from the Y Axis zero baseline and a square end at the baseline.
 _Avoid_: Bar-chart item, column
@@ -69,7 +73,7 @@ The ordered field names and color markers that identify the Chart's Value Series
 _Avoid_: Image labels, chart labels
 
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, Legend text size, layout, and position, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, Legend text size, layout, and position, X Axis and Y Axis names and text styles, Y Axis Unit and its display locations, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:
@@ -93,7 +97,7 @@ The independent Worksheet-specific choice to fill the space between each Value S
 _Avoid_: Area Line Style, stacked area
 
 **Detail Labels**:
-Optional values shown with Bars or Line values. All Detail Labels share visibility, font size, and the configured Y Axis unit, while each selected Y Axis Field has one independently configured color shared by Bar Charts and Line Charts; that color applies outside and inside marks and is restored if the Field is removed and selected again. Line Chart labels remain visible independently of Point visibility; labels centered inside Bars are hidden when they do not fit entirely within the Bar. Detail Labels are hidden by default.
+Optional values shown with Bars or Line values. All Detail Labels share visibility, font size, and whether they include the configured Y Axis Unit, while each selected Y Axis Field has one independently configured color shared by Bar Charts and Line Charts; that color applies outside and inside marks and is restored if the Field is removed and selected again. Line Chart labels remain visible independently of Point visibility; labels centered inside Bars are hidden when they do not fit entirely within the Bar. Detail Labels are hidden by default.
 _Avoid_: Data labels, annotations
 
 **Point**:

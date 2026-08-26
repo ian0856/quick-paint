@@ -3,10 +3,12 @@ import { init } from 'echarts/core'
 import type { ECharts } from 'echarts/core'
 import { computed, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import ZoomPanCanvas from '../../../components/ZoomPanCanvas.vue'
-import { createChartOption, type ChartModel } from '../utils'
-
-const CHART_WIDTH = 1600
-const CHART_HEIGHT = 900
+import {
+  CHART_SURFACE_HEIGHT,
+  CHART_SURFACE_WIDTH,
+  createChartOption,
+  type ChartModel,
+} from '../utils'
 
 const props = defineProps<{
   chart: ChartModel
@@ -16,17 +18,21 @@ const zoomPanCanvas = useTemplateRef<InstanceType<typeof ZoomPanCanvas>>('zoomPa
 const chartHost = useTemplateRef<HTMLDivElement>('chartHost')
 let chartInstance: ECharts | null = null
 const chartTypeLabel = computed(() => props.chart.settings.chartType === 'bar' ? '柱状图' : '折线图')
+const chartSurfaceStyle = {
+  width: `${CHART_SURFACE_WIDTH}px`,
+  height: `${CHART_SURFACE_HEIGHT}px`,
+}
 
 function updateChart() {
-  chartInstance?.setOption(createChartOption(props.chart, { chartWidth: CHART_WIDTH }), { notMerge: true, lazyUpdate: false })
+  chartInstance?.setOption(createChartOption(props.chart), { notMerge: true, lazyUpdate: false })
 }
 
 onMounted(() => {
   if (!chartHost.value) return
   chartInstance = init(chartHost.value, undefined, {
     renderer: 'canvas',
-    width: CHART_WIDTH,
-    height: CHART_HEIGHT,
+    width: CHART_SURFACE_WIDTH,
+    height: CHART_SURFACE_HEIGHT,
   })
   updateChart()
   void document.fonts?.ready.then(() => updateChart())
@@ -47,7 +53,8 @@ onBeforeUnmount(() => {
       <div class="chart-panel relative h-max w-max border border-base rounded-1.5 bg-base p-[10px] shadow-[0_8px_22px_rgb(30_42_64/5%)]">
         <div
           ref="chartHost"
-          class="h-[900px] w-[1600px] flex-none"
+          class="flex-none"
+          :style="chartSurfaceStyle"
           role="img"
           :aria-label="`${chartTypeLabel}：${chart.title}，共 ${chart.labels.length} 条数据，${chart.series.length} 个数值系列`"
         />

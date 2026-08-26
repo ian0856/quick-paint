@@ -22,6 +22,8 @@ import { deriveSeriesGradientStartColor } from './chartSettings'
 export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
 export const CHART_FONT = 'Noto Sans SC Variable'
+export const CHART_SURFACE_WIDTH = 1600
+export const CHART_SURFACE_HEIGHT = 900
 
 export type ChartOption = ComposeOption<
   | BarSeriesOption
@@ -56,10 +58,11 @@ export function createChartOption(
   options: ChartOptionBuildOptions = {},
 ): ChartOption {
   const forExport = options.forExport === true
+  const metrics = legendMetrics(forExport)
   const legend = calculateLegendBox(
     model,
-    options.chartWidth ?? (forExport ? 1600 : 960),
-    forExport,
+    options.chartWidth ?? CHART_SURFACE_WIDTH,
+    metrics,
     options.measureText ?? canvasTextMeasurer(),
   )
   const unit = model.settings.yAxisUnit.trim()
@@ -95,10 +98,11 @@ export function createChartOption(
       height: legend.height,
       orient: model.settings.legendLayout,
       left: model.settings.legendPosition,
+      align: 'left',
       formatter: (name: string) => legend.formattedNames.get(name) ?? name,
-      itemWidth: forExport ? 20 : 14,
-      itemHeight: forExport ? 12 : 9,
-      itemGap: forExport ? 22 : 16,
+      itemWidth: metrics.itemWidth,
+      itemHeight: metrics.itemHeight,
+      itemGap: metrics.itemGap,
       textStyle: {
         color: '#344054',
         fontFamily: CHART_FONT,
@@ -172,17 +176,12 @@ export function createChartOption(
 function calculateLegendBox(
   model: ChartModel,
   chartWidth: number,
-  forExport: boolean,
+  metrics: ReturnType<typeof legendMetrics>,
   measureText: TextMeasurer,
 ) {
-  const top = forExport ? 82 : 62
-  const itemWidth = forExport ? 20 : 14
-  const itemHeight = forExport ? 12 : 9
-  const itemGap = forExport ? 22 : 16
-  const markerTextGap = forExport ? 7 : 5
+  const { itemGap, itemHeight, itemWidth, markerTextGap, sideInset, top } = metrics
   const fontSize = model.settings.legendFontSize
   const lineHeight = Math.ceil(Math.max(itemHeight, fontSize * 1.5))
-  const sideInset = forExport ? 72 : 36
   const availableWidth = Math.max(1, chartWidth - sideInset * 2)
   const availableTextWidth = Math.max(1, availableWidth - itemWidth - markerTextGap)
   const formattedNames = new Map<string, string>()
@@ -232,6 +231,12 @@ function calculateLegendBox(
     lineHeight,
     formattedNames,
   }
+}
+
+function legendMetrics(forExport: boolean) {
+  return forExport
+    ? { top: 82, itemWidth: 20, itemHeight: 12, itemGap: 22, markerTextGap: 7, sideInset: 72 }
+    : { top: 62, itemWidth: 14, itemHeight: 9, itemGap: 16, markerTextGap: 5, sideInset: 36 }
 }
 
 function wrapLegendName(

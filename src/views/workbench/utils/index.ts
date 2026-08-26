@@ -5,7 +5,14 @@ export {
   resolveChart,
   yAxisFieldUnavailableReason,
 } from './chartModel'
-export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createChartOption } from './chartConfig'
+export {
+  CHART_BLUE,
+  CHART_FONT,
+  CHART_SURFACE_HEIGHT,
+  CHART_SURFACE_WIDTH,
+  SERIES_COLORS,
+  createChartOption,
+} from './chartConfig'
 export type { ChartOption } from './chartConfig'
 export {
   SERIES_COLOR_SCHEMES,
