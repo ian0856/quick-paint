@@ -49,7 +49,7 @@ The vertical axis of the Chart, whose scale represents the values from all selec
 _Avoid_: Value axis, numeric axis
 
 **Y Axis Unit**:
-Optional text describing the unit of the Y Axis values. Its selected configurable display locations may include Detail Labels, Y Axis tick labels, and an independent `单位：{unit}` label above the upper end of the Y Axis; when present, the unit also appears in the Chart tooltip independently of those selections.
+Optional user-authored text describing the unit of the Y Axis values. Surrounding whitespace is removed, but its content is otherwise used without normalization. Its selected configurable display locations may include Detail Labels, Y Axis tick labels, and an independent `单位：{unit}` label above the upper end of the Y Axis; when present, the unit also appears in the Chart tooltip independently of those selections.
 _Avoid_: Y Axis split-line unit
 
 **Bar**:
