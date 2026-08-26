@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { ElSlider } from 'element-plus'
+import { ElSlider, ElSwitch } from 'element-plus'
 import { MAX_MAX_BAR_THICKNESS, MIN_MAX_BAR_THICKNESS } from '../utils'
 
 defineProps<{
   maxBarThickness: number
+  roundedBars: boolean
+  showBarBackground: boolean
   disabled: boolean
 }>()
 
 const emit = defineEmits<{
   updateMaxBarThickness: [value: number]
+  updateRoundedBars: [value: boolean]
+  updateShowBarBackground: [value: boolean]
 }>()
 </script>
 
@@ -29,5 +33,23 @@ const emit = defineEmits<{
       aria-label="最大柱宽"
       @input="emit('updateMaxBarThickness', $event as number)"
     />
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <span class="text-xs font-600 text-text-strong">圆角柱</span>
+      <ElSwitch
+        :model-value="roundedBars"
+        :disabled="disabled"
+        aria-label="圆角柱"
+        @change="emit('updateRoundedBars', $event as boolean)"
+      />
+    </div>
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <span class="text-xs font-600 text-text-strong">显示柱背景</span>
+      <ElSwitch
+        :model-value="showBarBackground"
+        :disabled="disabled"
+        aria-label="显示柱背景"
+        @change="emit('updateShowBarBackground', $event as boolean)"
+      />
+    </div>
   </section>
 </template>

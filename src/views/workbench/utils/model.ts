@@ -75,7 +75,13 @@ export type ChartSettings = {
   chartType: ChartType
   lineStyle: LineStyle
   areaFill: boolean
+  showYAxisSplitLines: boolean
+  showLinePoints: boolean
+  hollowLinePoints: boolean
+  roundedBars: boolean
+  showBarBackground: boolean
   showDetailLabels: boolean
+  showDetailLabelsInsideBars: boolean
   detailLabelFontSize: number
   detailLabelColor: string
   baseColorSchemeId: SeriesColorSchemeId
@@ -102,6 +108,7 @@ export type ChartSettings = {
 export type YAxisFieldSelection = {
   fieldId: FieldId
   color: string
+  seriesGradient: boolean
 }
 
 export type ValueSeries = YAxisFieldSelection & {

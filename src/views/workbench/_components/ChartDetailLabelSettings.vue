@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ElColorPicker, ElInputNumber, ElSwitch } from 'element-plus'
 import { MAX_CHART_FONT_SIZE, MIN_CHART_FONT_SIZE } from '../utils'
+import type { ChartType } from '../utils'
 
 defineProps<{
   showDetailLabels: boolean
+  showInsideBars: boolean
+  chartType: ChartType
   fontSize: number
   color: string
   disabled: boolean
@@ -11,6 +14,7 @@ defineProps<{
 
 const emit = defineEmits<{
   updateShowDetailLabels: [value: boolean]
+  updateShowInsideBars: [value: boolean]
   updateFontSize: [value: number]
   updateColor: [value: string]
 }>()
@@ -37,6 +41,15 @@ function updateColor(color: string | null) {
     </div>
 
     <div v-if="showDetailLabels" class="mt-4 border-t border-base pt-4">
+      <div v-if="chartType === 'bar'" class="mb-4 flex items-center justify-between gap-3">
+        <span class="text-xs font-600 text-text-strong">显示在柱内部</span>
+        <ElSwitch
+          :model-value="showInsideBars"
+          :disabled="disabled"
+          aria-label="显示在柱内部"
+          @change="emit('updateShowInsideBars', $event as boolean)"
+        />
+      </div>
       <h4 class="m-0 text-xs font-600 text-text-strong">详情字段</h4>
       <div class="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         <div>

@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { ElColorPicker, ElRadio, ElRadioGroup } from 'element-plus'
+import { ElColorPicker, ElRadio, ElRadioGroup, ElSwitch } from 'element-plus'
 import { SERIES_COLOR_SCHEMES, type FieldId, type SeriesColorSchemeId, type SeriesColorSchemeSelection } from '../utils'
 
 defineProps<{
-  series: Array<{ fieldId: FieldId; label: string; color: string }>
+  series: Array<{ fieldId: FieldId; label: string; color: string; seriesGradient: boolean }>
   activeScheme: SeriesColorSchemeSelection
+  showSeriesGradient: boolean
   disabled: boolean
 }>()
 
 const emit = defineEmits<{
   selectScheme: [id: SeriesColorSchemeId]
   updateColor: [fieldId: FieldId, color: string]
+  updateSeriesGradient: [fieldId: FieldId, value: boolean]
 }>()
 
 function updateColor(fieldId: FieldId, color: string | null) {
@@ -59,14 +61,26 @@ function updateColor(fieldId: FieldId, color: string | null) {
         class="min-h-10 flex items-center gap-3 border-t border-base py-1.5 first:border-t-0"
       >
         <span class="min-w-0 flex-1 truncate text-xs text-text" :title="item.label">{{ item.label }}</span>
-        <ElColorPicker
-          :model-value="item.color"
-          :disabled="disabled"
-          :show-alpha="false"
-          :predefine="SERIES_COLOR_SCHEMES.flatMap(scheme => [...scheme.colors])"
-          :aria-label="`设置系列颜色：${item.label}`"
-          @change="updateColor(item.fieldId, $event)"
-        />
+        <div class="flex flex-none items-center gap-2">
+          <ElColorPicker
+            :model-value="item.color"
+            :disabled="disabled"
+            :show-alpha="false"
+            :predefine="SERIES_COLOR_SCHEMES.flatMap(scheme => [...scheme.colors])"
+            :aria-label="`设置系列颜色：${item.label}`"
+            @change="updateColor(item.fieldId, $event)"
+          />
+          <ElSwitch
+            v-if="showSeriesGradient"
+            :model-value="item.seriesGradient"
+            :disabled="disabled"
+            inline-prompt
+            active-text="渐"
+            inactive-text="渐"
+            :aria-label="`Series Gradient：${item.label}`"
+            @change="emit('updateSeriesGradient', item.fieldId, $event as boolean)"
+          />
+        </div>
       </div>
     </div>
   </section>

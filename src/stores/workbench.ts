@@ -45,6 +45,7 @@ type WorksheetMapping = {
   xAxisFieldId: FieldId | null
   yAxisFields: YAxisFieldSelection[]
   fieldColors: Map<FieldId, string>
+  fieldGradients: Map<FieldId, boolean>
   chartSettings: ChartSettings
 }
 
@@ -67,6 +68,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   let worksheetMappings = new Map<string, WorksheetMapping>()
   let lastValidCharts = new Map<string, ChartModel>()
   let fieldColors = new Map<FieldId, string>()
+  let fieldGradients = new Map<FieldId, boolean>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
   const selectedWorksheet = computed(() => {
@@ -186,6 +188,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       yAxisFields.value = []
       chartSettings.value = createDefaultChartSettings()
       fieldColors = new Map()
+      fieldGradients = new Map()
       return
     }
     const savedMapping = worksheetMappings.get(worksheet.id)
@@ -193,16 +196,19 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId.value = savedMapping.xAxisFieldId
       yAxisFields.value = savedMapping.yAxisFields.map((field) => ({ ...field }))
       fieldColors = new Map(savedMapping.fieldColors)
+      fieldGradients = new Map(savedMapping.fieldGradients)
       chartSettings.value = { ...savedMapping.chartSettings }
     }
     else {
       const mapping = inferUniqueMapping(worksheet)
       chartSettings.value = { ...createDefaultChartSettings(), title: worksheet.name }
       fieldColors = new Map()
+      fieldGradients = new Map()
       xAxisFieldId.value = mapping.xAxisFieldId
       yAxisFields.value = mapping.yAxisFieldIds.map((fieldId, index) => ({
         fieldId,
         color: colorsForScheme(chartSettings.value.baseColorSchemeId)[index]!,
+        seriesGradient: false,
       }))
       for (const field of yAxisFields.value) fieldColors.set(field.fieldId, field.color)
       saveWorksheetMapping()
@@ -250,7 +256,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     for (const fieldId of defaultYAxisFieldIds(worksheet, id)) {
       const color = fieldColors.get(fieldId)
         ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
-      next.push({ fieldId, color })
+      next.push({ fieldId, color, seriesGradient: fieldGradients.get(fieldId) ?? false })
       fieldColors.set(fieldId, color)
     }
     yAxisFields.value = next
@@ -275,7 +281,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       if (retainedIds.has(fieldId)) continue
       const color = fieldColors.get(fieldId)
         ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
-      next.push({ fieldId, color })
+      next.push({ fieldId, color, seriesGradient: fieldGradients.get(fieldId) ?? false })
       fieldColors.set(fieldId, color)
     }
 
@@ -312,8 +318,38 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateShowYAxisSplitLines(showYAxisSplitLines: boolean) {
+    chartSettings.value = { ...chartSettings.value, showYAxisSplitLines }
+    finishChartChange()
+  }
+
+  function updateShowLinePoints(showLinePoints: boolean) {
+    chartSettings.value = { ...chartSettings.value, showLinePoints }
+    finishChartChange()
+  }
+
+  function updateHollowLinePoints(hollowLinePoints: boolean) {
+    chartSettings.value = { ...chartSettings.value, hollowLinePoints }
+    finishChartChange()
+  }
+
+  function updateRoundedBars(roundedBars: boolean) {
+    chartSettings.value = { ...chartSettings.value, roundedBars }
+    finishChartChange()
+  }
+
+  function updateShowBarBackground(showBarBackground: boolean) {
+    chartSettings.value = { ...chartSettings.value, showBarBackground }
+    finishChartChange()
+  }
+
   function updateShowDetailLabels(showDetailLabels: boolean) {
     chartSettings.value = { ...chartSettings.value, showDetailLabels }
+    finishChartChange()
+  }
+
+  function updateShowDetailLabelsInsideBars(showDetailLabelsInsideBars: boolean) {
+    chartSettings.value = { ...chartSettings.value, showDetailLabelsInsideBars }
     finishChartChange()
   }
 
@@ -346,7 +382,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   function selectSeriesColorScheme(id: SeriesColorSchemeId) {
     const colors = colorsForScheme(id)
     yAxisFields.value = yAxisFields.value.map((field, index) => ({
-      fieldId: field.fieldId,
+      ...field,
       color: colors[index]!,
     }))
     fieldColors = new Map(yAxisFields.value.map(field => [field.fieldId, field.color]))
@@ -361,6 +397,15 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       field.fieldId === fieldId ? { ...field, color } : field,
     )
     fieldColors.set(fieldId, color)
+    finishChartChange()
+  }
+
+  function updateSeriesGradient(fieldId: FieldId, seriesGradient: boolean) {
+    if (!yAxisFields.value.some(field => field.fieldId === fieldId)) return
+    yAxisFields.value = yAxisFields.value.map(field =>
+      field.fieldId === fieldId ? { ...field, seriesGradient } : field,
+    )
+    fieldGradients.set(fieldId, seriesGradient)
     finishChartChange()
   }
 
@@ -487,6 +532,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId: xAxisFieldId.value,
       yAxisFields: yAxisFields.value.map((field) => ({ ...field })),
       fieldColors: new Map(fieldColors),
+      fieldGradients: new Map(fieldGradients),
       chartSettings: { ...chartSettings.value },
     })
   }
@@ -554,7 +600,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateChartType,
     updateLineStyle,
     updateAreaFill,
+    updateShowYAxisSplitLines,
+    updateShowLinePoints,
+    updateHollowLinePoints,
+    updateRoundedBars,
+    updateShowBarBackground,
     updateShowDetailLabels,
+    updateShowDetailLabelsInsideBars,
     updateDetailLabelFontSize,
     updateDetailLabelColor,
     updateTitle,
@@ -562,6 +614,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateTitleColor,
     selectSeriesColorScheme,
     updateValueSeriesColor,
+    updateSeriesGradient,
     updateMaxBarThickness,
     updateXAxisName,
     updateYAxisName,
