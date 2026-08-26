@@ -5,8 +5,6 @@ import {
   deriveSeriesGradientStartColor,
   normalizeHexColor,
   recognizeColorScheme,
-  validateFixedYAxisTickInterval,
-  yAxisSpan,
 } from './chartSettings'
 
 describe('chart settings', () => {
@@ -41,9 +39,9 @@ describe('chart settings', () => {
     })
   })
 
-  test('derives the opaque gradient start by mixing the base color 35% toward white', () => {
-    expect(deriveSeriesGradientStartColor('#2563EB')).toBe('#719AF2')
-    expect(deriveSeriesGradientStartColor('#000000')).toBe('#595959')
+  test('derives a pronounced opaque gradient start by mixing the base color 65% toward white', () => {
+    expect(deriveSeriesGradientStartColor('#2563EB')).toBe('#B3C8F8')
+    expect(deriveSeriesGradientStartColor('#000000')).toBe('#A6A6A6')
     expect(deriveSeriesGradientStartColor('#FFFFFF')).toBe('#FFFFFF')
   })
 
@@ -71,15 +69,4 @@ describe('chart settings', () => {
     expect(normalizeHexColor('#AABBCC80')).toBeNull()
   })
 
-  test('validates fixed intervals against syntax and the 200-interval limit', () => {
-    expect(validateFixedYAxisTickInterval('2.5', 500)).toEqual({ valid: true, value: 2.5 })
-    expect(validateFixedYAxisTickInterval('1e2', 500).valid).toBe(false)
-    expect(validateFixedYAxisTickInterval('0', 500).valid).toBe(false)
-    expect(validateFixedYAxisTickInterval('2', 500).valid).toBe(false)
-  })
-
-  test('calculates the visible span including zero', () => {
-    expect(yAxisSpan([{ values: [20, 40, null] }])).toBe(40)
-    expect(yAxisSpan([{ values: [-20, 40] }])).toBe(60)
-  })
 })

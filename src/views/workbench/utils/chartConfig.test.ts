@@ -16,7 +16,6 @@ describe('createChartOption Bar Chart behavior', () => {
       settings: {
         ...createDefaultChartSettings(),
         chartType: 'bar',
-        maxBarThickness: 72,
         title: '销售',
         titleFontSize: 24,
         titleColor: '#010203',
@@ -35,8 +34,6 @@ describe('createChartOption Bar Chart behavior', () => {
         yAxisTickLabelFontSize: 15,
         xAxisTickLabelColor: '#112233',
         yAxisTickLabelColor: '#445566',
-        yAxisTickIntervalMode: 'fixed',
-        fixedYAxisTickInterval: 10,
       },
     }
 
@@ -51,7 +48,6 @@ describe('createChartOption Bar Chart behavior', () => {
       name: '金额',
       nameTextStyle: { color: '#AABBCC', fontSize: 17 },
       axisLabel: { color: '#445566', fontSize: 15 },
-      interval: 10,
       scale: false,
     })
     expect(option.title).toMatchObject({ text: '销售', textStyle: { color: '#010203', fontSize: 24 } })
@@ -67,7 +63,6 @@ describe('createChartOption Bar Chart behavior', () => {
           { value: 21, itemStyle: { borderRadius: 0 } },
         ],
         itemStyle: { color: '#D97706' },
-        barMaxWidth: 72,
       },
       {
         type: 'bar',
@@ -77,9 +72,9 @@ describe('createChartOption Bar Chart behavior', () => {
           { value: 104, itemStyle: { borderRadius: 0 } },
         ],
         itemStyle: { color: '#2563EB' },
-        barMaxWidth: 72,
       },
     ])
+    expect(series.every(item => !('barMaxWidth' in item))).toBe(true)
     expect(series[0]).toMatchObject({
       label: { show: true, position: 'top', color: '#654321', fontSize: 14 },
       labelLayout: { hideOverlap: true },
@@ -330,7 +325,7 @@ describe('createChartOption Line Chart behavior', () => {
       y2: 0,
       global: false,
       colorStops: [
-        { offset: 0, color: '#E6A75D' },
+        { offset: 0, color: '#F2CFA8' },
         { offset: 1, color: '#D97706' },
       ],
     }

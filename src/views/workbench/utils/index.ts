@@ -18,14 +18,10 @@ export {
   DEFAULT_CHART_TITLE_FONT_SIZE,
   DEFAULT_DETAIL_LABEL_COLOR,
   DEFAULT_DETAIL_LABEL_FONT_SIZE,
-  DEFAULT_MAX_BAR_THICKNESS,
   MAX_AXIS_NAME_LENGTH,
   MAX_AXIS_UNIT_LENGTH,
   MAX_CHART_FONT_SIZE,
   MAX_CHART_TITLE_LENGTH,
-  MAX_MAX_BAR_THICKNESS,
-  MAX_Y_AXIS_TICK_INTERVALS,
-  MIN_MAX_BAR_THICKNESS,
   MIN_CHART_FONT_SIZE,
   colorsForScheme,
   createDefaultChartSettings,
@@ -33,10 +29,7 @@ export {
   firstAvailableSeriesColor,
   normalizeHexColor,
   recognizeColorScheme,
-  validateFixedYAxisTickInterval,
-  yAxisSpan,
 } from './chartSettings'
-export type { FixedIntervalValidation } from './chartSettings'
 export { downloadChart, exportChartImage, sanitizeFileName } from './chartExporter'
 export type { ChartExport } from './chartExporter'
 export { LIMITS } from './model'

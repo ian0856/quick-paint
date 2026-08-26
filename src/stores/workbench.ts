@@ -17,16 +17,13 @@ import {
   MAX_AXIS_UNIT_LENGTH,
   MAX_CHART_FONT_SIZE,
   MAX_CHART_TITLE_LENGTH,
-  MAX_MAX_BAR_THICKNESS,
   MIN_CHART_FONT_SIZE,
-  MIN_MAX_BAR_THICKNESS,
   normalizeHexColor,
   parseFile,
   firstAvailableSeriesColor,
   recognizeColorScheme,
   resolveChart,
   validateSourceTable,
-  yAxisSpan,
   type SeriesColorSchemeId,
   type ChartModel,
   type ChartSettings,
@@ -111,10 +108,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     isParsing.value || chartResolution.value?.valid !== true,
   )
   const activeColorScheme = computed(() => recognizeColorScheme(yAxisFields.value))
-  const currentYAxisSpan = computed(() => {
-    const resolution = chartResolution.value
-    return resolution?.valid ? yAxisSpan(resolution.chart.series) : 0
-  })
   const exportDisabled = computed(() =>
     isParsing.value || isExporting.value || chartResolution.value?.valid !== true,
   )
@@ -409,12 +402,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
-  function updateMaxBarThickness(value: number) {
-    if (!Number.isInteger(value) || value < MIN_MAX_BAR_THICKNESS || value > MAX_MAX_BAR_THICKNESS) return
-    chartSettings.value = { ...chartSettings.value, maxBarThickness: value }
-    finishChartChange()
-  }
-
   function updateXAxisName(value: string) {
     if (value.length > MAX_AXIS_NAME_LENGTH) return
     chartSettings.value = { ...chartSettings.value, xAxisName: value }
@@ -488,17 +475,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     const color = normalizeHexColor(value)
     if (!color) return
     chartSettings.value = { ...chartSettings.value, yAxisTickLabelColor: color }
-    finishChartChange()
-  }
-
-  function updateYAxisTickIntervalMode(mode: ChartSettings['yAxisTickIntervalMode']) {
-    chartSettings.value = { ...chartSettings.value, yAxisTickIntervalMode: mode }
-    finishChartChange()
-  }
-
-  function updateFixedYAxisTickInterval(value: number) {
-    if (!Number.isFinite(value) || value <= 0) return
-    chartSettings.value = { ...chartSettings.value, fixedYAxisTickInterval: value }
     finishChartChange()
   }
 
@@ -588,7 +564,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     controlsDisabled,
     chartSettingsDisabled,
     activeColorScheme,
-    currentYAxisSpan,
     exportDisabled,
     importFile,
     selectWorksheet,
@@ -615,7 +590,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     selectSeriesColorScheme,
     updateValueSeriesColor,
     updateSeriesGradient,
-    updateMaxBarThickness,
     updateXAxisName,
     updateYAxisName,
     updateXAxisNameFontSize,
@@ -628,8 +602,6 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateYAxisTickLabelFontSize,
     updateXAxisTickLabelColor,
     updateYAxisTickLabelColor,
-    updateYAxisTickIntervalMode,
-    updateFixedYAxisTickInterval,
     updateSourceTable,
     insertSourceTableRecord,
     deleteSourceTableRecords,

@@ -32,7 +32,6 @@ const {
   hasInvalidTableEdits,
   chartSettingsDisabled,
   activeColorScheme,
-  currentYAxisSpan,
 } = storeToRefs(store)
 
 const series = computed(() => yAxisFields.value.flatMap((selection) => {
@@ -151,11 +150,9 @@ const diagnostic = computed(() => {
             </div>
             <div v-else class="border-t border-base py-5">
               <BarLayoutSettings
-                :max-bar-thickness="chartSettings.maxBarThickness"
                 :rounded-bars="chartSettings.roundedBars"
                 :show-bar-background="chartSettings.showBarBackground"
                 :disabled="chartSettingsDisabled"
-                @update-max-bar-thickness="store.updateMaxBarThickness"
                 @update-rounded-bars="store.updateRoundedBars"
                 @update-show-bar-background="store.updateShowBarBackground"
               />
@@ -178,9 +175,6 @@ const diagnostic = computed(() => {
               :y-axis-tick-label-font-size="chartSettings.yAxisTickLabelFontSize"
               :x-axis-tick-label-color="chartSettings.xAxisTickLabelColor"
               :y-axis-tick-label-color="chartSettings.yAxisTickLabelColor"
-              :interval-mode="chartSettings.yAxisTickIntervalMode"
-              :fixed-interval="chartSettings.fixedYAxisTickInterval"
-              :y-axis-span="currentYAxisSpan"
               :disabled="chartSettingsDisabled"
               @update-x-axis-name="store.updateXAxisName"
               @update-y-axis-name="store.updateYAxisName"
@@ -194,8 +188,6 @@ const diagnostic = computed(() => {
               @update-y-axis-tick-label-font-size="store.updateYAxisTickLabelFontSize"
               @update-x-axis-tick-label-color="store.updateXAxisTickLabelColor"
               @update-y-axis-tick-label-color="store.updateYAxisTickLabelColor"
-              @update-interval-mode="store.updateYAxisTickIntervalMode"
-              @update-fixed-interval="store.updateFixedYAxisTickInterval"
             />
           </div>
         </div>

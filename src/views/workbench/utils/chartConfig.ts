@@ -142,9 +142,6 @@ export function createChartOption(
         fontSize: model.settings.yAxisTickLabelFontSize,
         formatter: (value: number) => formatValue(value, unit),
       },
-      interval: model.settings.yAxisTickIntervalMode === 'fixed'
-        ? model.settings.fixedYAxisTickInterval
-        : undefined,
     },
     series: model.series.map(series => model.settings.chartType === 'bar'
       ? createBarSeries(model, series, unit)
@@ -167,7 +164,6 @@ function createBarSeries(
       },
     })),
     itemStyle: { color: series.color },
-    barMaxWidth: model.settings.maxBarThickness,
     showBackground: model.settings.showBarBackground,
     backgroundStyle: {
       color: 'rgba(180, 180, 180, 0.2)',

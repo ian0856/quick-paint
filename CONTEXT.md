@@ -65,7 +65,7 @@ The independent Worksheet-specific choice for a Line Chart Value Series to color
 _Avoid_: Gradient Color Scheme, color ramp
 
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis tick interval, Y Axis split-line visibility, and Detail Labels. They also include maximum Bar width, Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:
