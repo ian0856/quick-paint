@@ -292,6 +292,135 @@ async function canvasColorStats(
   }, { color, region })
 }
 
+async function blueGradientStats(canvas: ReturnType<Page['locator']>) {
+  return canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')!
+    const { width, height } = context.canvas
+    const pixels = context.getImageData(0, 0, width, height).data
+    const samples = [[], []] as [number[], number[]]
+    let baseColorPixels = 0
+    for (let y = Math.floor(height * 0.16); y < Math.ceil(height * 0.88); y += 1) {
+      for (let x = Math.floor(width * 0.08); x < Math.ceil(width * 0.97); x += 1) {
+        const index = (y * width + x) * 4
+        const red = pixels[index]!
+        const green = pixels[index + 1]!
+        const blue = pixels[index + 2]!
+        if (red === 37 && green === 99 && blue === 235) baseColorPixels += 1
+        if (blue > 180 && blue > red + 50 && blue > green + 30) {
+          samples[x < width * 0.52 ? 0 : 1].push(red)
+        }
+      }
+    }
+    const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length
+    return {
+      leftPixels: samples[0].length,
+      rightPixels: samples[1].length,
+      leftAverageRed: average(samples[0]),
+      rightAverageRed: average(samples[1]),
+      baseColorPixels,
+    }
+  })
+}
+
+type BarPixelStats = {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+  area: number
+  topWidth: number
+  bottomWidth: number
+  whiteInteriorPixels: number
+}
+
+async function analyzeBlueBars(canvas: ReturnType<Page['locator']>): Promise<BarPixelStats[]> {
+  return canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')!
+    const { width, height } = context.canvas
+    const data = context.getImageData(0, 0, width, height).data
+    return collectBlueBars(data, width, height)
+
+    function collectBlueBars(pixels: Uint8ClampedArray, canvasWidth: number, canvasHeight: number) {
+      const columns: number[] = []
+      for (let x = Math.floor(canvasWidth * 0.08); x < Math.ceil(canvasWidth * 0.97); x += 1) {
+        for (let y = Math.floor(canvasHeight * 0.16); y < Math.ceil(canvasHeight * 0.88); y += 1) {
+          const index = (y * canvasWidth + x) * 4
+          if (pixels[index] === 37 && pixels[index + 1] === 99 && pixels[index + 2] === 235) {
+            columns.push(x)
+            break
+          }
+        }
+      }
+      const runs: Array<[number, number]> = []
+      for (const x of columns) {
+        const current = runs.at(-1)
+        if (!current || x > current[1] + 1) runs.push([x, x])
+        else current[1] = x
+      }
+      return runs.flatMap(([minX, maxX]) => {
+        let minY = canvasHeight
+        let maxY = -1
+        let area = 0
+        const rowWidths = new Map<number, number>()
+        for (let y = Math.floor(canvasHeight * 0.16); y < Math.ceil(canvasHeight * 0.88); y += 1) {
+          let rowWidth = 0
+          for (let x = minX; x <= maxX; x += 1) {
+            const index = (y * canvasWidth + x) * 4
+            if (pixels[index] === 37 && pixels[index + 1] === 99 && pixels[index + 2] === 235) {
+              rowWidth += 1
+              area += 1
+              minY = Math.min(minY, y)
+              maxY = Math.max(maxY, y)
+            }
+          }
+          if (rowWidth > 0) rowWidths.set(y, rowWidth)
+        }
+        if (area < 4) return []
+        let whiteInteriorPixels = 0
+        for (let y = minY + 2; y <= maxY - 2; y += 1) {
+          for (let x = minX + 2; x <= maxX - 2; x += 1) {
+            const index = (y * canvasWidth + x) * 4
+            if (pixels[index]! > 250 && pixels[index + 1]! > 250 && pixels[index + 2]! > 250) {
+              whiteInteriorPixels += 1
+            }
+          }
+        }
+        return [{
+          minX,
+          maxX,
+          minY,
+          maxY,
+          area,
+          topWidth: rowWidths.get(minY)!,
+          bottomWidth: rowWidths.get(maxY)!,
+          whiteInteriorPixels,
+        }]
+      })
+    }
+  })
+}
+
+async function analyzeBlueBarsInPng(page: Page, png: Buffer): Promise<BarPixelStats[]> {
+  const selector = '#png-analysis-canvas'
+  await page.evaluate(async (encoded) => {
+    const image = new Image()
+    image.src = `data:image/png;base64,${encoded}`
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.id = 'png-analysis-canvas'
+    canvas.hidden = true
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+    const context = canvas.getContext('2d')!
+    context.drawImage(image, 0, 0)
+    document.body.append(canvas)
+  }, png.toString('base64'))
+  const canvas = page.locator(selector)
+  const stats = await analyzeBlueBars(canvas)
+  await canvas.evaluate(element => element.remove())
+  return stats
+}
+
 async function setChartColor(
   page: Page,
   settings: ReturnType<Page['getByRole']>,
@@ -526,6 +655,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('switch', { name: '圆角柱' })).not.toBeChecked()
   await settings.locator('.el-switch:has(input[aria-label="显示 Y 轴分割线"]) .el-switch__core').click()
   await settings.locator('.el-switch:has(input[aria-label="圆角柱"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示柱背景"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示在柱内部"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeEnabled()
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
@@ -577,6 +710,9 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await settings.getByText('柔和', { exact: true }).click()
   await expect(hollowPoints).toBeChecked()
   await expect(salesGradient).toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
+  await expect(showPoints).not.toBeChecked()
+  await expect(hollowPoints).toHaveCount(0)
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')).toHaveText(['销售额', '利润'])
 
@@ -594,6 +730,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '圆角柱' })).not.toBeChecked()
+  await expect(settings.getByRole('switch', { name: '显示柱背景' })).not.toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
+  await expect(settings.getByRole('switch', { name: '显示在柱内部' })).not.toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
   await expect(page.getByRole('img', { name: '柱状图：订单，共 2 条数据，1 个数值系列' })).toBeVisible()
 
   await page.locator('label[for="worksheet"] + .el-select').click()
@@ -610,13 +750,20 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('radio', { name: '平滑' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).not.toBeChecked()
-  await expect(settings.getByRole('switch', { name: '节点镂空' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '显示节点' })).not.toBeChecked()
+  await expect(settings.getByRole('switch', { name: '节点镂空' })).toHaveCount(0)
   await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
+  await expect(settings.getByRole('switch', { name: '节点镂空' })).toBeChecked()
   await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
   await settings.getByText('柱状图', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: '柱状图' })).toBeChecked()
   await expect(settings.getByText('120 px')).toBeVisible()
   await expect(settings.getByRole('switch', { name: '圆角柱' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '显示柱背景' })).toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
+  await expect(settings.getByRole('switch', { name: '显示在柱内部' })).toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
   await settings.getByText('折线图', { exact: true }).click()
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
@@ -692,6 +839,7 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await expect(sparseLineData).toBeAttached()
   await expect(sparseLineData.getByRole('row').nth(2)).toContainText('（空白）')
   await expect(sparseLineData.getByRole('row').nth(3)).toContainText('（空白）')
+  await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
 
   await page.getByRole('button', { name: '移除y轴字段：销售额' }).click()
   await page.getByRole('button', { name: '移除y轴字段：利润' }).click()
@@ -704,6 +852,7 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await page.keyboard.press('Escape')
   await expect(page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，1 个数值系列' })).toBeVisible()
   await expect(settings.getByRole('radio', { name: '平滑' })).toBeEnabled()
+  await expect(settings.getByRole('switch', { name: '显示节点' })).not.toBeChecked()
 
   await importFile(page, '单点.csv', 'text/csv', Buffer.from([
     '月份,销售额',
@@ -720,6 +869,12 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await expect(settings.getByRole('switch', { name: '显示节点' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '节点镂空' })).not.toBeChecked()
   await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).not.toBeChecked()
+  const singlePointPixels = await canvasColorStats(
+    page.locator('.chart-panel canvas'),
+    [37, 99, 235],
+    { x: [0.15, 0.9], y: [0.15, 0.85] },
+  )
+  expect(singlePointPixels.count).toBeGreaterThan(5)
   const singlePointData = page.getByRole('table', { name: '折线图数据' })
   await expect(singlePointData.getByRole('row').nth(1)).toContainText('一月')
   await expect(singlePointData.getByRole('row').nth(1)).toContainText('10')
@@ -784,6 +939,67 @@ test('configures advanced Line and Bar appearance while preserving dependent val
   await expect(barBackground).toBeChecked()
   await expect(insideLabels).toBeChecked()
   await expect(salesGradient).toHaveCount(0)
+})
+
+test('renders gradients, mixed-sign caps, and size-aware inside labels in preview and PNG', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/workbench')
+  await importFile(page, '混合图表.csv', 'text/csv', Buffer.from([
+    '类别,销售额,利润',
+    '正值,100,40',
+    '短柱,5,2',
+    '零值,0,0',
+    '负值,-80,-30',
+    '负短柱,-5,-2',
+    '这是一个很长的分类标签,60,',
+  ].join('\n')))
+
+  const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
+  const canvas = page.locator('.chart-panel canvas')
+  await expect(page.getByRole('img', { name: '柱状图：Sheet1，共 6 条数据，2 个数值系列' })).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+
+  await settings.getByText('折线图', { exact: true }).click()
+  await settings.locator('.el-switch:has(input[aria-label="显示线下半透明面积"]) .el-switch__core').click()
+  const solidFingerprint = await canvasFingerprint(canvas)
+  await settings.locator('.el-switch:has(input[aria-label="Series Gradient：销售额"]) .el-switch__core').click()
+  await expect.poll(() => canvasFingerprint(canvas)).not.toBe(solidFingerprint)
+  const gradient = await blueGradientStats(canvas)
+  expect(gradient.leftPixels).toBeGreaterThan(20)
+  expect(gradient.rightPixels).toBeGreaterThan(20)
+  expect(gradient.leftAverageRed).toBeGreaterThan(gradient.rightAverageRed + 8)
+  expect(gradient.baseColorPixels).toBeGreaterThan(5)
+
+  await settings.getByText('柱状图', { exact: true }).click()
+  await settings.locator('.el-switch:has(input[aria-label="圆角柱"]) .el-switch__core').click()
+  const roundedBars = await analyzeBlueBars(canvas)
+  const positiveBar = roundedBars[0]!
+  const negativeBar = roundedBars
+    .filter(bar => Math.abs(bar.minY - positiveBar.maxY) <= 2)
+    .sort((first, second) => second.area - first.area)[0]!
+  expect(positiveBar.topWidth).toBeLessThan(positiveBar.bottomWidth)
+  expect(negativeBar.bottomWidth).toBeLessThan(negativeBar.topWidth)
+
+  await settings.locator('.el-switch:has(input[aria-label="圆角柱"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="显示在柱内部"]) .el-switch__core').click()
+  await page.setViewportSize({ width: 1024, height: 500 })
+  const previewBars = await analyzeBlueBars(canvas)
+  expect(previewBars[0]!.whiteInteriorPixels).toBeGreaterThan(0)
+  expect(previewBars[1]!.whiteInteriorPixels).toBe(0)
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '导出 PNG' }).click()
+  const download = await downloadPromise
+  const stream = await download.createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk))
+  const png = Buffer.concat(chunks)
+  expect(png.readUInt32BE(16)).toBe(1600)
+  expect(png.readUInt32BE(20)).toBe(900)
+  const exportedBars = await analyzeBlueBarsInPng(page, png)
+  expect(exportedBars[0]!.whiteInteriorPixels).toBeGreaterThan(0)
+  expect(exportedBars[1]!.whiteInteriorPixels).toBeGreaterThan(0)
 })
 
 test('opens responsive Chart Settings as a focus-restoring drawer', async ({ page }) => {

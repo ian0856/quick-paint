@@ -245,7 +245,7 @@ function barDetailLabel(model: ChartModel, seriesColor: string, unit: string) {
       ? ({ rect, labelRect }: {
           rect: { width: number, height: number }
           labelRect: { width: number, height: number }
-        }) => rect.width >= labelRect.width + 4 && rect.height >= labelRect.height + 4
+        }) => rect.width >= labelRect.width && rect.height >= labelRect.height
           ? { hideOverlap: true }
           : { fontSize: 0 }
       : { hideOverlap: true },
