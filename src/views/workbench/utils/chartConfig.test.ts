@@ -10,8 +10,8 @@ describe('createChartOption Bar Chart behavior', () => {
       xAxisFieldId: 0,
       labels: ['华东', '华南'],
       series: [
-        { fieldId: 2, fieldName: '利润', color: '#D97706', seriesGradient: false, values: [16, 21] },
-        { fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [86, 104] },
+        { fieldId: 2, fieldName: '利润', color: '#D97706', detailLabelColor: '#654321', seriesGradient: false, values: [16, 21] },
+        { fieldId: 1, fieldName: '销售额', color: '#2563EB', detailLabelColor: '#123456', seriesGradient: false, values: [86, 104] },
       ],
       settings: {
         ...createDefaultChartSettings(),
@@ -26,10 +26,9 @@ describe('createChartOption Bar Chart behavior', () => {
         xAxisNameColor: '#778899',
         yAxisNameColor: '#AABBCC',
         yAxisUnit: '万元',
-        chartLabelFontSize: 13,
+        legendFontSize: 13,
         showDetailLabels: true,
         detailLabelFontSize: 14,
-        detailLabelColor: '#654321',
         xAxisTickLabelFontSize: 14,
         yAxisTickLabelFontSize: 15,
         xAxisTickLabelColor: '#112233',
@@ -81,9 +80,123 @@ describe('createChartOption Bar Chart behavior', () => {
     })
   })
 
-  test('formats Y Axis, tooltip, and detail values with the configured unit', () => {
+  test.each([
+    ['horizontal', 'left'],
+    ['horizontal', 'center'],
+    ['horizontal', 'right'],
+    ['vertical', 'left'],
+    ['vertical', 'center'],
+    ['vertical', 'right'],
+  ] as const)('maps %s Legend layout at %s', (legendLayout, legendPosition) => {
     const model = barModel()
-    model.settings = { ...model.settings, showDetailLabels: true, yAxisUnit: ' 万元 ' }
+    model.settings = { ...model.settings, legendLayout, legendPosition }
+
+    expect(createChartOption(model).legend).toMatchObject({
+      type: legendLayout === 'horizontal' ? 'scroll' : 'plain',
+      orient: legendLayout,
+      left: legendPosition,
+      align: 'left',
+    })
+  })
+
+  test('keeps horizontal Legend field names on one line while vertical names may wrap', () => {
+    const fieldNames = [
+      '销售额（含税）',
+      'Net Revenue for APAC and EMEA',
+      '平均订单金额',
+      'Refund Rate by Customer Segment',
+      '超长中文字段名称用于验证完整显示',
+    ]
+    const model = barModel()
+    model.series = fieldNames.map((fieldName, index) => ({
+      fieldId: index + 1,
+      fieldName,
+      color: '#2563EB',
+      detailLabelColor: '#344054',
+      seriesGradient: false,
+      values: [index + 1],
+    }))
+
+    model.settings = { ...model.settings, legendLayout: 'horizontal' }
+    const horizontal = createChartOption(model, { chartWidth: 520 })
+    model.settings = { ...model.settings, legendLayout: 'vertical' }
+    const vertical = createChartOption(model, { chartWidth: 520 })
+    const horizontalLegend = horizontal.legend as { data: unknown[], top: number, width?: number, height: number }
+    const verticalLegend = vertical.legend as { data: unknown[], top: number, width: number, height: number }
+    const horizontalGrid = horizontal.grid as { top: number }
+    const verticalGrid = vertical.grid as { top: number }
+
+    expect(horizontalLegend.data).toEqual(fieldNames)
+    expect(verticalLegend.data).toEqual(fieldNames)
+    expect(horizontalLegend.width).toBeUndefined()
+    expect(horizontalLegend.height).toBe(17)
+    expect(verticalLegend.height).toBeGreaterThan(horizontalLegend.height)
+    expect(horizontalGrid.top).toBeGreaterThanOrEqual(horizontalLegend.top + horizontalLegend.height + 24)
+    expect(verticalGrid.top).toBeGreaterThanOrEqual(verticalLegend.top + verticalLegend.height + 24)
+  })
+
+  test('uses measured text width to wrap one long vertical Legend field name without losing text', () => {
+    const model = barModel()
+    const fieldName = 'WWWWWWWWWWWWWWWWWWWW'
+    model.series[0]!.fieldName = fieldName
+    model.settings = { ...model.settings, legendLayout: 'vertical' }
+    const option = createChartOption(model, {
+      chartWidth: 200,
+      measureText: value => value.length * 20,
+    })
+    const legend = option.legend as {
+      formatter: (name: string) => string
+      height: number
+      top: number
+    }
+    const formattedName = legend.formatter(fieldName)
+
+    expect(formattedName).toContain('\n')
+    expect(formattedName.replaceAll('\n', '')).toBe(fieldName)
+    expect(legend.height).toBeGreaterThan(20)
+    expect((option.grid as { top: number }).top).toBeGreaterThanOrEqual(legend.top + legend.height + 24)
+  })
+
+  test('keeps four short horizontal Legend items on one line in a narrow chart', () => {
+    const model = barModel()
+    const fieldNames = ['华东', '华南', '华西', '华北']
+    model.series = fieldNames.map((fieldName, index) => ({
+      fieldId: index + 1,
+      fieldName,
+      color: '#2563EB',
+      detailLabelColor: '#344054',
+      seriesGradient: false,
+      values: [index + 1],
+    }))
+    model.settings = { ...model.settings, legendLayout: 'horizontal', legendFontSize: 11 }
+
+    const option = createChartOption(model, {
+      chartWidth: 269,
+      measureText: value => value.length * 11,
+    })
+    const legend = option.legend as {
+      formatter: (name: string) => string
+      width: number
+      height: number
+      padding: number
+    }
+
+    expect(fieldNames.map(legend.formatter)).toEqual(fieldNames)
+    expect(legend.width).toBeUndefined()
+    expect(legend.height).toBe(17)
+    expect(legend.padding).toBe(0)
+  })
+
+  test('formats every configured display location while keeping the tooltip independent', () => {
+    const model = barModel()
+    model.settings = {
+      ...model.settings,
+      showDetailLabels: true,
+      yAxisUnit: ' 万元 ',
+      yAxisUnitDisplayLocations: ['detail', 'tick', 'top'],
+      yAxisTickLabelFontSize: 15,
+      yAxisTickLabelColor: '#445566',
+    }
     const option = createChartOption(model)
     const axisFormatter = (option.yAxis as { axisLabel: { formatter: (value: number) => string } }).axisLabel.formatter
     const tooltipFormatter = (option.tooltip as { valueFormatter: (value: unknown) => string }).valueFormatter
@@ -92,6 +205,31 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(axisFormatter(20)).toBe('20万元')
     expect(tooltipFormatter(20)).toBe('20万元')
     expect(labelFormatter({ value: 20 })).toBe('20万元')
+    expect(option.graphic).toMatchObject({
+      elements: [{
+        id: 'y-axis-unit',
+        style: { text: '单位：万元', fill: '#445566', fontSize: 15 },
+      }],
+    })
+  })
+
+  test('allows every configurable unit location to be cleared without changing the tooltip', () => {
+    const model = barModel()
+    model.settings = {
+      ...model.settings,
+      showDetailLabels: true,
+      yAxisUnit: '万元',
+      yAxisUnitDisplayLocations: [],
+    }
+    const option = createChartOption(model)
+    const axisFormatter = (option.yAxis as { axisLabel: { formatter: (value: number) => string } }).axisLabel.formatter
+    const tooltipFormatter = (option.tooltip as { valueFormatter: (value: unknown) => string }).valueFormatter
+    const labelFormatter = ((option.series as unknown[])?.[0] as { label: { formatter: (params: { value: unknown }) => string } }).label.formatter
+
+    expect(axisFormatter(20)).toBe('20')
+    expect(labelFormatter({ value: 20 })).toBe('20')
+    expect(tooltipFormatter(20)).toBe('20万元')
+    expect(option.graphic).toEqual({ elements: [] })
   })
 
   test('preserves visible Chart semantics between preview and Chart Image options', () => {
@@ -100,6 +238,7 @@ describe('createChartOption Bar Chart behavior', () => {
       ...model.settings,
       showDetailLabels: true,
       yAxisUnit: '万元',
+      yAxisUnitDisplayLocations: ['detail', 'top'],
       xAxisName: '地区',
       yAxisName: '金额',
     }
@@ -135,6 +274,14 @@ describe('createChartOption Bar Chart behavior', () => {
     const previewAxisFormatter = (previewYAxis.axisLabel as { formatter: (value: number) => string }).formatter
     const chartImageAxisFormatter = (chartImageYAxis.axisLabel as { formatter: (value: number) => string }).formatter
     expect(chartImageAxisFormatter(86)).toBe(previewAxisFormatter(86))
+  })
+
+  test('uses the configured Canvas color in preview and Chart Image options', () => {
+    const model = barModel()
+    model.settings = { ...model.settings, canvasColor: '#F0F4F880' }
+
+    expect(createChartOption(model).backgroundColor).toBe('#F0F4F880')
+    expect(createChartOption(model, { forExport: true }).backgroundColor).toBe('#F0F4F880')
   })
 
   test('rounds only the free end of positive and negative Bars and links the background shape', () => {
@@ -174,7 +321,7 @@ describe('createChartOption Bar Chart behavior', () => {
     })
   })
 
-  test('centers Bar Detail Labels with a base-color contrast color and hides labels that do not fit', () => {
+  test('centers Bar Detail Labels with the configured Field color and hides labels that do not fit', () => {
     const model = barModel()
     model.series[0]!.values = [86, 0]
     model.settings = {
@@ -182,6 +329,7 @@ describe('createChartOption Bar Chart behavior', () => {
       showDetailLabels: true,
       showDetailLabelsInsideBars: true,
       yAxisUnit: '万元',
+      yAxisUnitDisplayLocations: ['detail'],
     }
     const series = (createChartOption(model).series as unknown[])?.[0] as {
       label: { formatter: (params: { value: unknown }) => string }
@@ -189,7 +337,7 @@ describe('createChartOption Bar Chart behavior', () => {
     }
 
     expect(series).toMatchObject({
-      label: { show: true, position: 'inside', distance: 0, color: '#FFFFFF' },
+      label: { show: true, position: 'inside', distance: 0, color: '#344054' },
     })
     expect(series.label.formatter({ value: 86 })).toBe('86万元')
     expect(series.label.formatter({ value: 0 })).toBe('')
@@ -200,16 +348,17 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(series.labelLayout({
       rect: { width: 30, height: 12 },
       labelRect: { width: 40, height: 14 },
-    })).toEqual({ fontSize: 0 })
+    })).toEqual({ fontSize: 0, opacity: 0 })
   })
 
-  test('uses black for inside labels when it has higher contrast against the Bar color', () => {
+  test('uses each Field Detail Label color unchanged inside Bars', () => {
     const model = barModel()
     model.series[0]!.color = '#D97706'
+    model.series[0]!.detailLabelColor = '#E5E7EB'
     model.settings = { ...model.settings, showDetailLabels: true, showDetailLabelsInsideBars: true }
 
     expect((createChartOption(model).series as unknown[])?.[0]).toMatchObject({
-      label: { color: '#000000' },
+      label: { color: '#E5E7EB' },
     })
   })
 })
@@ -225,8 +374,8 @@ describe('createChartOption Line Chart behavior', () => {
       xAxisFieldId: 0,
       labels: ['一月', '二月', '三月'],
       series: [
-        { fieldId: 2, fieldName: '利润', color: '#D97706', seriesGradient: false, values: [10, null, 30] },
-        { fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [20, 25, 28] },
+        { fieldId: 2, fieldName: '利润', color: '#D97706', detailLabelColor: '#344054', seriesGradient: false, values: [10, null, 30] },
+        { fieldId: 1, fieldName: '销售额', color: '#2563EB', detailLabelColor: '#344054', seriesGradient: false, values: [20, 25, 28] },
       ],
       settings: {
         ...createDefaultChartSettings(),
@@ -280,6 +429,7 @@ describe('createChartOption Line Chart behavior', () => {
       fieldId: 1,
       fieldName: '销售额',
       color: '#2563EB',
+      detailLabelColor: '#344054',
       seriesGradient: false,
       values: Array.from({ length: 100 }, (_, index) => index + 1),
     }]
@@ -353,15 +503,15 @@ describe('createChartOption Line Chart behavior', () => {
       ...model.settings,
       showDetailLabels: true,
       detailLabelFontSize: 16,
-      detailLabelColor: '#123456',
       yAxisUnit: '万元',
+      yAxisUnitDisplayLocations: ['detail'],
     }
     const series = (createChartOption(model).series as unknown[])?.[0] as {
       label: { formatter: (params: { value: unknown }) => string }
     }
 
     expect(series).toMatchObject({
-      label: { show: true, position: 'top', color: '#123456', fontSize: 16 },
+      label: { show: true, position: 'top', color: '#344054', fontSize: 16 },
       labelLayout: { hideOverlap: true },
     })
     expect(series.label.formatter({ value: 30 })).toBe('30万元')
@@ -395,7 +545,7 @@ function barModel(): BarChartModel {
     title: '销售',
     xAxisFieldId: 0,
     labels: ['华东'],
-    series: [{ fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [86] }],
+    series: [{ fieldId: 1, fieldName: '销售额', color: '#2563EB', detailLabelColor: '#344054', seriesGradient: false, values: [86] }],
     settings: { ...createDefaultChartSettings(), chartType: 'bar' },
   }
 }

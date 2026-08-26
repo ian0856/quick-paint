@@ -5,7 +5,14 @@ export {
   resolveChart,
   yAxisFieldUnavailableReason,
 } from './chartModel'
-export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createChartOption } from './chartConfig'
+export {
+  CHART_BLUE,
+  CHART_FONT,
+  CHART_SURFACE_HEIGHT,
+  CHART_SURFACE_WIDTH,
+  SERIES_COLORS,
+  createChartOption,
+} from './chartConfig'
 export type { ChartOption } from './chartConfig'
 export {
   SERIES_COLOR_SCHEMES,
@@ -13,9 +20,10 @@ export {
   DEFAULT_AXIS_NAME_FONT_SIZE,
   DEFAULT_AXIS_TICK_LABEL_COLOR,
   DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
-  DEFAULT_CHART_LABEL_FONT_SIZE,
+  DEFAULT_LEGEND_FONT_SIZE,
   DEFAULT_CHART_TITLE_COLOR,
   DEFAULT_CHART_TITLE_FONT_SIZE,
+  DEFAULT_CANVAS_COLOR,
   DEFAULT_DETAIL_LABEL_COLOR,
   DEFAULT_DETAIL_LABEL_FONT_SIZE,
   MAX_AXIS_NAME_LENGTH,
@@ -25,8 +33,10 @@ export {
   MIN_CHART_FONT_SIZE,
   colorsForScheme,
   createDefaultChartSettings,
+  createDefaultYAxisFieldSelection,
   deriveSeriesGradientStartColor,
   firstAvailableSeriesColor,
+  normalizeCanvasColor,
   normalizeHexColor,
   recognizeColorScheme,
 } from './chartSettings'

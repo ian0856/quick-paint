@@ -129,7 +129,10 @@ export function resolveChart(
     xAxisFieldId,
     labels: xAxisField.values.map((cell) => cell.kind === 'missing' ? '（空白）' : cell.display),
     series,
-    settings: { ...settings },
+    settings: {
+      ...settings,
+      yAxisUnitDisplayLocations: [...settings.yAxisUnitDisplayLocations],
+    },
   }
   return { valid: true, chart, diagnostic: null }
 }

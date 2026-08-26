@@ -69,6 +69,9 @@ export type SeriesColorSchemeId = 'classic' | 'contrast' | 'soft'
 export type SeriesColorSchemeSelection = SeriesColorSchemeId | 'custom'
 export type ChartType = 'bar' | 'line'
 export type LineStyle = 'straight' | 'smooth'
+export type LegendLayout = 'horizontal' | 'vertical'
+export type LegendPosition = 'left' | 'center' | 'right'
+export type YAxisUnitDisplayLocation = 'detail' | 'tick' | 'top'
 
 export type ChartSettings = {
   chartType: ChartType
@@ -82,11 +85,13 @@ export type ChartSettings = {
   showDetailLabels: boolean
   showDetailLabelsInsideBars: boolean
   detailLabelFontSize: number
-  detailLabelColor: string
+  legendLayout: LegendLayout
+  legendPosition: LegendPosition
   baseColorSchemeId: SeriesColorSchemeId
   title: string
   titleFontSize: number
   titleColor: string
+  canvasColor: string
   xAxisName: string
   yAxisName: string
   xAxisNameFontSize: number
@@ -94,7 +99,8 @@ export type ChartSettings = {
   xAxisNameColor: string
   yAxisNameColor: string
   yAxisUnit: string
-  chartLabelFontSize: number
+  yAxisUnitDisplayLocations: YAxisUnitDisplayLocation[]
+  legendFontSize: number
   xAxisTickLabelFontSize: number
   yAxisTickLabelFontSize: number
   xAxisTickLabelColor: string
@@ -104,6 +110,7 @@ export type ChartSettings = {
 export type YAxisFieldSelection = {
   fieldId: FieldId
   color: string
+  detailLabelColor: string
   seriesGradient: boolean
 }
 

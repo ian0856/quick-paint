@@ -1,10 +1,12 @@
 import { init } from 'echarts/core'
 import type { ECharts } from 'echarts/core'
-import { CHART_FONT, createChartOption } from './chartConfig'
+import {
+  CHART_FONT,
+  CHART_SURFACE_HEIGHT,
+  CHART_SURFACE_WIDTH,
+  createChartOption,
+} from './chartConfig'
 import type { ChartModel } from './model'
-
-const EXPORT_WIDTH = 1600
-const EXPORT_HEIGHT = 900
 
 export type ChartExport = { blob: Blob; fileName: string }
 
@@ -19,14 +21,14 @@ export async function exportChartImage(model: ChartModel): Promise<ChartExport> 
   try {
     chart = init(host, undefined, {
       renderer: 'canvas',
-      width: EXPORT_WIDTH,
-      height: EXPORT_HEIGHT,
+      width: CHART_SURFACE_WIDTH,
+      height: CHART_SURFACE_HEIGHT,
       devicePixelRatio: 1,
     })
     await renderChart(chart, model)
     const canvas = host.querySelector('canvas')
     const context = canvas?.getContext('2d')
-    if (!canvas || !context || canvas.width !== EXPORT_WIDTH || canvas.height !== EXPORT_HEIGHT) {
+    if (!canvas || !context || canvas.width !== CHART_SURFACE_WIDTH || canvas.height !== CHART_SURFACE_HEIGHT) {
       throw new Error('当前浏览器无法创建图片画布。')
     }
     if (!hasVisiblePlot(context, canvas.width, canvas.height)) {
@@ -36,7 +38,7 @@ export async function exportChartImage(model: ChartModel): Promise<ChartExport> 
     const blob = dataUrlToPng(chart.getDataURL({
       type: 'png',
       pixelRatio: 1,
-      backgroundColor: '#ffffff',
+      backgroundColor: 'transparent',
     }))
     if (blob.size === 0) throw new Error('PNG 编码失败。')
     return { blob, fileName: `${sanitizeFileName(model.title)}.png` }
@@ -70,8 +72,8 @@ function createExportHost() {
   host.style.position = 'fixed'
   host.style.left = '-10000px'
   host.style.top = '0'
-  host.style.width = `${EXPORT_WIDTH}px`
-  host.style.height = `${EXPORT_HEIGHT}px`
+  host.style.width = `${CHART_SURFACE_WIDTH}px`
+  host.style.height = `${CHART_SURFACE_HEIGHT}px`
   host.style.background = '#ffffff'
   host.setAttribute('aria-hidden', 'true')
   return host

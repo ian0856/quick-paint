@@ -7,8 +7,9 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
 import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
+import ChartCanvasSettings from './ChartCanvasSettings.vue'
 import ChartDetailLabelSettings from './ChartDetailLabelSettings.vue'
-import ChartLabelSettings from './ChartLabelSettings.vue'
+import ChartLegendSettings from './ChartLegendSettings.vue'
 import LinePointSettings from './LinePointSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
 import ChartTypeSettings from './ChartTypeSettings.vue'
@@ -41,6 +42,7 @@ const series = computed(() => yAxisFields.value.flatMap((selection) => {
         fieldId: field.id,
         label: field.label,
         color: selection.color,
+        detailLabelColor: selection.detailLabelColor,
         seriesGradient: selection.seriesGradient,
       }]
     : []
@@ -95,6 +97,13 @@ const diagnostic = computed(() => {
               />
             </div>
             <div class="border-t border-base py-5">
+              <ChartCanvasSettings
+                :color="chartSettings.canvasColor"
+                :disabled="chartSettingsDisabled"
+                @update-color="store.updateCanvasColor"
+              />
+            </div>
+            <div class="border-t border-base py-5">
               <ChartTitleSettings
                 :key="worksheet?.id"
                 :title="chartSettings.title"
@@ -118,11 +127,15 @@ const diagnostic = computed(() => {
               />
             </div>
             <div class="border-t border-base py-5">
-              <ChartLabelSettings
+              <ChartLegendSettings
                 :key="worksheet?.id"
-                :font-size="chartSettings.chartLabelFontSize"
+                :font-size="chartSettings.legendFontSize"
+                :layout="chartSettings.legendLayout"
+                :position="chartSettings.legendPosition"
                 :disabled="chartSettingsDisabled"
-                @update-font-size="store.updateChartLabelFontSize"
+                @update-font-size="store.updateLegendFontSize"
+                @update-layout="store.updateLegendLayout"
+                @update-position="store.updateLegendPosition"
               />
             </div>
             <div class="border-t border-base py-5">
@@ -131,7 +144,7 @@ const diagnostic = computed(() => {
                 :show-detail-labels="chartSettings.showDetailLabels"
                 :show-inside-bars="chartSettings.showDetailLabelsInsideBars"
                 :font-size="chartSettings.detailLabelFontSize"
-                :color="chartSettings.detailLabelColor"
+                :fields="series.map(item => ({ fieldId: item.fieldId, label: item.label, color: item.detailLabelColor }))"
                 :disabled="chartSettingsDisabled"
                 @update-show-detail-labels="store.updateShowDetailLabels"
                 @update-show-inside-bars="store.updateShowDetailLabelsInsideBars"
@@ -170,6 +183,7 @@ const diagnostic = computed(() => {
               :x-axis-name-color="chartSettings.xAxisNameColor"
               :y-axis-name-color="chartSettings.yAxisNameColor"
               :y-axis-unit="chartSettings.yAxisUnit"
+              :y-axis-unit-display-locations="chartSettings.yAxisUnitDisplayLocations"
               :show-y-axis-split-lines="chartSettings.showYAxisSplitLines"
               :x-axis-tick-label-font-size="chartSettings.xAxisTickLabelFontSize"
               :y-axis-tick-label-font-size="chartSettings.yAxisTickLabelFontSize"
@@ -183,6 +197,7 @@ const diagnostic = computed(() => {
               @update-x-axis-name-color="store.updateXAxisNameColor"
               @update-y-axis-name-color="store.updateYAxisNameColor"
               @update-y-axis-unit="store.updateYAxisUnit"
+              @update-y-axis-unit-display-locations="store.updateYAxisUnitDisplayLocations"
               @update-show-y-axis-split-lines="store.updateShowYAxisSplitLines"
               @update-x-axis-tick-label-font-size="store.updateXAxisTickLabelFontSize"
               @update-y-axis-tick-label-font-size="store.updateYAxisTickLabelFontSize"
