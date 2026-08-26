@@ -5,14 +5,14 @@ import type { ChartType, LineStyle } from '../utils'
 defineProps<{
   chartType: ChartType
   lineStyle: LineStyle
-  showLineArea: boolean
+  areaFill: boolean
   disabled: boolean
 }>()
 
 const emit = defineEmits<{
   updateChartType: [value: ChartType]
   updateLineStyle: [value: LineStyle]
-  updateShowLineArea: [value: boolean]
+  updateAreaFill: [value: boolean]
 }>()
 
 const chartTypeOptions = [
@@ -50,10 +50,10 @@ const lineStyleOptions = [
       <div class="mt-4 flex items-center justify-between gap-3">
         <span class="text-xs font-600 text-text-strong">显示面积</span>
         <ElSwitch
-          :model-value="showLineArea"
+          :model-value="areaFill"
           :disabled="disabled"
           aria-label="显示线下半透明面积"
-          @change="emit('updateShowLineArea', $event as boolean)"
+          @change="emit('updateAreaFill', $event as boolean)"
         />
       </div>
     </template>

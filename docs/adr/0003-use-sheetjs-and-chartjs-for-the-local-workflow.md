@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0007
 ---
 
 # Use SheetJS and Chart.js for the local workflow

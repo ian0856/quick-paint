@@ -1,28 +1,39 @@
 <script setup lang="ts">
-import { Chart } from 'chart.js/auto'
+import { init } from 'echarts/core'
+import type { ECharts } from 'echarts/core'
 import { computed, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import ZoomPanCanvas from '../../../components/ZoomPanCanvas.vue'
-import { createChartConfig, type ChartModel } from '../utils'
+import { createChartOption, type ChartModel } from '../utils'
 
 const props = defineProps<{
   chart: ChartModel
   resetRevision: number
 }>()
 const zoomPanCanvas = useTemplateRef<InstanceType<typeof ZoomPanCanvas>>('zoomPanCanvas')
-const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
-let chartInstance: Chart | null = null
+const chartHost = useTemplateRef<HTMLDivElement>('chartHost')
+let chartInstance: ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
 const chartTypeLabel = computed(() => props.chart.settings.chartType === 'bar' ? '柱状图' : '折线图')
 
-function renderChart() {
-  if (!canvas.value) return
-  chartInstance?.destroy()
-  chartInstance = new Chart(canvas.value, createChartConfig(props.chart, { responsive: true }))
+function updateChart() {
+  chartInstance?.setOption(createChartOption(props.chart), { notMerge: true, lazyUpdate: false })
 }
 
-onMounted(renderChart)
-watch(() => props.chart, renderChart)
+onMounted(() => {
+  if (!chartHost.value) return
+  chartInstance = init(chartHost.value, undefined, { renderer: 'canvas' })
+  updateChart()
+  resizeObserver = new ResizeObserver(() => chartInstance?.resize({ animation: { duration: 0 } }))
+  resizeObserver.observe(chartHost.value)
+})
+watch(() => props.chart, updateChart)
 watch(() => props.resetRevision, () => zoomPanCanvas.value?.reset())
-onBeforeUnmount(() => chartInstance?.destroy())
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  const instance = chartInstance
+  chartInstance = null
+  instance?.dispose()
+})
 </script>
 
 <template>
@@ -30,8 +41,9 @@ onBeforeUnmount(() => chartInstance?.destroy())
     <div class="text-right text-caption">共 {{ chart.labels.length }} 条数据</div>
     <ZoomPanCanvas ref="zoomPanCanvas" aria-label="图表缩放画布">
       <div class="chart-panel relative h-full min-h-0 min-w-0 border border-base rounded-1.5 bg-base px-7 pb-4.5 pt-6 shadow-[0_8px_22px_rgb(30_42_64/5%)]">
-        <canvas
-          ref="canvas"
+        <div
+          ref="chartHost"
+          class="h-full min-h-0 min-w-0 w-full"
           role="img"
           :aria-label="`${chartTypeLabel}：${chart.title}，共 ${chart.labels.length} 条数据，${chart.series.length} 个数值系列`"
         />

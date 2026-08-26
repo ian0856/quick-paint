@@ -74,8 +74,8 @@ export type YAxisTickIntervalMode = 'auto' | 'fixed'
 export type ChartSettings = {
   chartType: ChartType
   lineStyle: LineStyle
-  showLineArea: boolean
-  showDetails: boolean
+  areaFill: boolean
+  showDetailLabels: boolean
   detailLabelFontSize: number
   detailLabelColor: string
   baseColorSchemeId: SeriesColorSchemeId

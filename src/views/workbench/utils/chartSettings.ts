@@ -50,8 +50,8 @@ export function createDefaultChartSettings(): ChartSettings {
   return {
     chartType: 'bar',
     lineStyle: 'straight',
-    showLineArea: false,
-    showDetails: false,
+    areaFill: false,
+    showDetailLabels: false,
     detailLabelFontSize: DEFAULT_DETAIL_LABEL_FONT_SIZE,
     detailLabelColor: DEFAULT_DETAIL_LABEL_COLOR,
     baseColorSchemeId: 'classic',

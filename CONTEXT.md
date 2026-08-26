@@ -53,11 +53,11 @@ The visual mark for one Value Series value from one Record. Bars in the same Val
 _Avoid_: Bar-chart item, column
 
 **Series Color Scheme**:
-The complete assignment of one color to each Value Series in a Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet.
+The complete assignment of one base color to each Value Series in a Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet; a Line Chart may independently render any Value Series with a gradient derived from its base color.
 _Avoid_: Bar Color Scheme, color list, theme
 
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, and Y Axis tick interval. They also include maximum Bar width, which applies only to a Bar Chart, and Line Style, which applies only to a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis tick interval, Y Axis split-line visibility, and Detail Labels. They also include maximum Bar width, Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and per-series gradient choices for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:
@@ -73,11 +73,19 @@ A Chart that represents each Value Series with Bars grouped by Record.
 _Avoid_: Column Chart
 
 **Line Style**:
-The Worksheet-specific choice of whether a Line Chart uses straight Lines, monotone smooth Lines, or straight Lines with non-stacked area fill to the Y Axis zero baseline. Straight Lines without area fill are the default; every style retains visible Points and preserves gaps at missing Source Values.
+The Worksheet-specific choice of whether a Line Chart uses straight Lines or monotone smooth Lines. Straight Lines are the default; both styles preserve the chosen Point visibility and gaps at missing Source Values.
 _Avoid_: Line mode, curve type
 
+**Area Fill**:
+The independent Worksheet-specific choice to fill the space between each Value Series Line and the Y Axis zero baseline without stacking Value Series. Area Fill can be combined with either Line Style, shares a Value Series gradient with its Line when enabled, and is off by default.
+_Avoid_: Area Line Style, stacked area
+
+**Detail Labels**:
+Optional values shown with Bars or Points using the configured Y Axis unit and font size. Labels above marks use the configured color, while labels centered inside Bars automatically use a contrasting black or white; Detail Labels are hidden by default.
+_Avoid_: Data labels, annotations
+
 **Point**:
-The visual mark for one Value Series value from one Record in a Line Chart. Every available value produces a visible Point, including a Value Series with only one available value.
+The optional solid or hollow visual mark for one Value Series value from one Record in a Line Chart. When Points are visible, every available value produces one, including a Value Series with only one available value.
 _Avoid_: Dot, marker
 
 **Line**:

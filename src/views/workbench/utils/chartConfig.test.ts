@@ -1,15 +1,18 @@
 import { describe, expect, test } from 'vitest'
-import { createChartConfig } from './chartConfig'
+import { createChartOption } from './chartConfig'
 import { createDefaultChartSettings } from './chartSettings'
 import type { BarChartModel, LineChartModel, LineStyle } from './model'
 
-describe('createChartConfig Bar Chart variant', () => {
-  test('maps Chart Settings into preview and export configuration', () => {
+describe('createChartOption Bar Chart behavior', () => {
+  test('preserves Record and Value Series order while applying shared Chart Settings', () => {
     const model: BarChartModel = {
       title: '销售',
       xAxisFieldId: 0,
-      labels: ['华东'],
-      series: [{ fieldId: 1, fieldName: '销售额', color: '#123456', values: [86] }],
+      labels: ['华东', '华南'],
+      series: [
+        { fieldId: 2, fieldName: '利润', color: '#D97706', values: [16, 21] },
+        { fieldId: 1, fieldName: '销售额', color: '#2563EB', values: [86, 104] },
+      ],
       settings: {
         ...createDefaultChartSettings(),
         chartType: 'bar',
@@ -25,7 +28,7 @@ describe('createChartConfig Bar Chart variant', () => {
         yAxisNameColor: '#AABBCC',
         yAxisUnit: '万元',
         chartLabelFontSize: 13,
-        showDetails: true,
+        showDetailLabels: true,
         detailLabelFontSize: 14,
         detailLabelColor: '#654321',
         xAxisTickLabelFontSize: 14,
@@ -37,44 +40,101 @@ describe('createChartConfig Bar Chart variant', () => {
       },
     }
 
-    const config = createChartConfig(model, { responsive: true })
-    expect(config.data.datasets[0]).toMatchObject({
-      backgroundColor: '#123456',
-      borderColor: '#123456',
-      maxBarThickness: 72,
+    const option = createChartOption(model)
+    expect(option.xAxis).toMatchObject({
+      data: ['华东', '华南'],
+      name: '地区',
+      nameTextStyle: { color: '#778899', fontSize: 16 },
+      axisLabel: { color: '#112233', fontSize: 14 },
     })
-    expect(config.options?.plugins?.title).toMatchObject({
-      text: '销售',
-      color: '#010203',
-      font: { size: 24 },
+    expect(option.yAxis).toMatchObject({
+      name: '金额',
+      nameTextStyle: { color: '#AABBCC', fontSize: 17 },
+      axisLabel: { color: '#445566', fontSize: 15 },
+      interval: 10,
+      scale: false,
     })
-    expect(config.options?.scales?.x).toMatchObject({
-      title: { display: true, text: '地区', color: '#778899', font: { size: 16 } },
-      ticks: { color: '#112233', font: { size: 14 } },
+    expect(option.title).toMatchObject({ text: '销售', textStyle: { color: '#010203', fontSize: 24 } })
+    expect(option.legend).toMatchObject({ data: ['利润', '销售额'], textStyle: { fontSize: 13 } })
+    expect(option.tooltip).toMatchObject({ trigger: 'axis', axisPointer: { type: 'shadow' } })
+    const series = option.series as Array<Record<string, unknown>>
+    expect(series).toMatchObject([
+      {
+        type: 'bar', name: '利润', data: [16, 21], itemStyle: { color: '#D97706' }, barMaxWidth: 72,
+      },
+      {
+        type: 'bar', name: '销售额', data: [86, 104], itemStyle: { color: '#2563EB' }, barMaxWidth: 72,
+      },
+    ])
+    expect(series[0]).toMatchObject({
+      label: { show: true, position: 'top', color: '#654321', fontSize: 14 },
+      labelLayout: { hideOverlap: true },
     })
-    expect(config.options?.scales?.y).toMatchObject({
-      title: { display: true, text: '金额', color: '#AABBCC', font: { size: 17 } },
-      ticks: { color: '#445566', font: { size: 15 }, stepSize: 10 },
+  })
+
+  test('formats Y Axis, tooltip, and detail values with the configured unit', () => {
+    const model = barModel()
+    model.settings = { ...model.settings, showDetailLabels: true, yAxisUnit: ' 万元 ' }
+    const option = createChartOption(model)
+    const axisFormatter = (option.yAxis as { axisLabel: { formatter: (value: number) => string } }).axisLabel.formatter
+    const tooltipFormatter = (option.tooltip as { valueFormatter: (value: unknown) => string }).valueFormatter
+    const labelFormatter = ((option.series as unknown[])?.[0] as { label: { formatter: (params: { value: unknown }) => string } }).label.formatter
+
+    expect(axisFormatter(20)).toBe('20万元')
+    expect(tooltipFormatter(20)).toBe('20万元')
+    expect(labelFormatter({ value: 20 })).toBe('20万元')
+  })
+
+  test('preserves visible Chart semantics between preview and Chart Image options', () => {
+    const model = barModel()
+    model.settings = {
+      ...model.settings,
+      showDetailLabels: true,
+      yAxisUnit: '万元',
+      xAxisName: '地区',
+      yAxisName: '金额',
+    }
+    const preview = createChartOption(model)
+    const chartImage = createChartOption(model, { forExport: true })
+    const previewSeries = preview.series as Array<Record<string, unknown>>
+    const chartImageSeries = chartImage.series as Array<Record<string, unknown>>
+    const previewTitle = preview.title as { textStyle: unknown }
+    const previewLegend = preview.legend as { textStyle: unknown }
+    const previewYAxis = preview.yAxis as Record<string, unknown>
+    const chartImageYAxis = chartImage.yAxis as Record<string, unknown>
+
+    expect(serializableOption(chartImageSeries)).toEqual(serializableOption(previewSeries))
+    const previewLabelFormatter = (previewSeries[0]!.label as { formatter: (params: { value: unknown }) => string }).formatter
+    const chartImageLabelFormatter = (chartImageSeries[0]!.label as { formatter: (params: { value: unknown }) => string }).formatter
+    expect(chartImageLabelFormatter({ value: 86 })).toBe(previewLabelFormatter({ value: 86 }))
+    expect(chartImage.title).toMatchObject({ text: model.title, textStyle: previewTitle.textStyle })
+    expect(chartImage.legend).toMatchObject({
+      data: model.series.map(series => series.fieldName),
+      textStyle: previewLegend.textStyle,
     })
-    expect(config.options?.plugins?.legend?.labels).toMatchObject({ font: { size: 13 } })
-    expect(config.options?.plugins?.datalabels).toMatchObject({
-      align: 'top',
-      anchor: 'end',
-      color: '#654321',
-      display: 'auto',
-      font: { family: 'Noto Sans SC Variable', size: 14, weight: 600 },
+    expect(chartImage.xAxis).toMatchObject({
+      data: model.labels,
+      name: '地区',
+      nameTextStyle: (preview.xAxis as Record<string, unknown>).nameTextStyle,
+      axisLabel: (preview.xAxis as Record<string, unknown>).axisLabel,
     })
-    const yTicks = config.options?.scales?.y?.ticks
-    expect(yTicks && typeof yTicks !== 'boolean' && yTicks.callback?.call({
-      getLabelForValue: (value: number) => String(value),
-    } as never, 20, 0, [])).toBe('20万元')
-    expect(config.options?.scales?.y).not.toHaveProperty('min')
-    expect(config.options?.scales?.y).not.toHaveProperty('max')
+    expect(chartImage.yAxis).toMatchObject({
+      name: '金额',
+      nameTextStyle: previewYAxis.nameTextStyle,
+      axisLabel: serializableOption(previewYAxis.axisLabel),
+    })
+    const previewAxisFormatter = (previewYAxis.axisLabel as { formatter: (value: number) => string }).formatter
+    const chartImageAxisFormatter = (chartImageYAxis.axisLabel as { formatter: (value: number) => string }).formatter
+    expect(chartImageAxisFormatter(86)).toBe(previewAxisFormatter(86))
   })
 })
 
-describe('createChartConfig Line Chart variants', () => {
-  function lineModel(lineStyle: LineStyle, showLineArea = false): LineChartModel {
+function serializableOption(value: unknown) {
+  return JSON.parse(JSON.stringify(value)) as unknown
+}
+
+describe('createChartOption Line Chart behavior', () => {
+  function lineModel(lineStyle: LineStyle, areaFill = false): LineChartModel {
     return {
       title: '趋势',
       xAxisFieldId: 0,
@@ -87,109 +147,97 @@ describe('createChartConfig Line Chart variants', () => {
         ...createDefaultChartSettings(),
         chartType: 'line',
         lineStyle,
-        showLineArea,
+        areaFill,
       },
     }
   }
 
   test.each([
-    ['straight', false, { tension: 0, fill: false, cubicInterpolationMode: 'default' }],
-    ['straight', true, { tension: 0, fill: 'origin', cubicInterpolationMode: 'default' }],
-    ['smooth', false, { tension: 0.4, fill: false, cubicInterpolationMode: 'monotone' }],
-    ['smooth', true, { tension: 0.4, fill: 'origin', cubicInterpolationMode: 'monotone' }],
-  ] as const)('maps %s style with area set to %s', (lineStyle, showLineArea, semantics) => {
-    const config = createChartConfig(lineModel(lineStyle, showLineArea), { responsive: true })
+    ['straight', false, false],
+    ['straight', true, true],
+    ['smooth', false, false],
+    ['smooth', true, true],
+  ] as const)('maps %s Lines with area set to %s independently', (lineStyle, areaFill, hasArea) => {
+    const option = createChartOption(lineModel(lineStyle, areaFill))
+    const firstSeries = (option.series as unknown[])?.[0]
 
-    expect(config.type).toBe('line')
-    expect(config.data.datasets.map(dataset => dataset.label)).toEqual(['利润', '销售额'])
-    expect(config.data.datasets[0]).toMatchObject({
+    expect(option.tooltip).toMatchObject({ trigger: 'axis', axisPointer: { type: 'line', snap: true } })
+    expect(option.legend).toMatchObject({ data: ['利润', '销售额'] })
+    expect(firstSeries).toMatchObject({
+      type: 'line',
+      name: '利润',
       data: [10, null, 30],
-      borderColor: '#D97706',
-      backgroundColor: showLineArea ? 'rgba(217, 119, 6, 0.15)' : '#D97706',
-      pointBackgroundColor: '#D97706',
-      pointBorderColor: '#D97706',
-      pointRadius: 4,
-      pointHoverRadius: 5,
-      spanGaps: false,
-      ...semantics,
+      connectNulls: false,
+      showSymbol: true,
+      showAllSymbol: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      smooth: lineStyle === 'smooth',
+      smoothMonotone: 'x',
+      lineStyle: { color: '#D97706', width: 2 },
+      itemStyle: { color: '#D97706' },
     })
-    expect(config.data.datasets[0]).not.toHaveProperty('maxBarThickness')
-    expect(config.options?.scales?.y).toMatchObject({ beginAtZero: true, stacked: false })
+    if (hasArea) expect(firstSeries).toMatchObject({ areaStyle: { color: '#D97706', opacity: 0.15 } })
+    else expect(firstSeries).not.toHaveProperty('areaStyle')
+    expect(firstSeries).not.toHaveProperty('barMaxWidth')
+    expect(option.yAxis).toMatchObject({ scale: false })
   })
 
-  test('applies shared Chart Settings to a Line Chart', () => {
+  test('keeps every Point eligible for display on a dense Line Chart', () => {
     const model = lineModel('straight')
-    model.settings = {
-      ...model.settings,
-      titleColor: '#010203',
-      titleFontSize: 24,
-      chartLabelFontSize: 13,
-      xAxisName: '月份',
-      yAxisName: '金额',
-      yAxisUnit: '万元',
-      yAxisTickIntervalMode: 'fixed',
-      fixedYAxisTickInterval: 5,
-    }
+    model.labels = Array.from({ length: 100 }, (_, index) => `Record ${index + 1}`)
+    model.series = [{
+      fieldId: 1,
+      fieldName: '销售额',
+      color: '#2563EB',
+      values: Array.from({ length: 100 }, (_, index) => index + 1),
+    }]
 
-    const config = createChartConfig(model, { responsive: false, forExport: true })
-    expect(config.options?.plugins?.title).toMatchObject({
-      text: '趋势',
-      color: '#010203',
-      font: { size: 24 },
-    })
-    expect(config.options?.plugins?.legend?.labels).toMatchObject({ font: { size: 13 } })
-    expect(config.options?.scales?.x).toMatchObject({ title: { display: true, text: '月份' } })
-    expect(config.options?.scales?.y).toMatchObject({
-      title: { display: true, text: '金额' },
-      ticks: { stepSize: 5 },
-    })
-    expect(config.options).toMatchObject({
-      responsive: false,
-      maintainAspectRatio: false,
-      devicePixelRatio: 1,
+    expect((createChartOption(model).series as unknown[])?.[0]).toMatchObject({
+      showSymbol: true,
+      showAllSymbol: true,
+      data: model.series[0]!.values,
     })
   })
 
-  test('shows values above line points only when details are enabled', () => {
-    const model = lineModel('straight')
-    let config = createChartConfig(model, { responsive: true })
-    expect(config.options?.plugins?.datalabels).toMatchObject({ display: false })
-
+  test('formats and hides overlapping Detail Labels above every available Point', () => {
+    const model = lineModel('smooth', true)
     model.settings = {
       ...model.settings,
-      showDetails: true,
+      showDetailLabels: true,
       detailLabelFontSize: 16,
       detailLabelColor: '#123456',
       yAxisUnit: '万元',
     }
-    config = createChartConfig(model, { responsive: true })
-    const datalabels = config.options?.plugins?.datalabels
-    expect(datalabels).toMatchObject({
-      align: 'top',
-      anchor: 'end',
-      color: '#123456',
-      display: 'auto',
-      font: { size: 16 },
+    const series = (createChartOption(model).series as unknown[])?.[0] as {
+      label: { formatter: (params: { value: unknown }) => string }
+    }
+
+    expect(series).toMatchObject({
+      label: { show: true, position: 'top', color: '#123456', fontSize: 16 },
+      labelLayout: { hideOverlap: true },
     })
-    if (!datalabels || typeof datalabels === 'boolean') throw new Error('Missing datalabel options')
-    expect(datalabels.formatter?.(86, {} as never)).toBe('86万元')
-    expect(datalabels.formatter?.(null, {} as never)).toBeNull()
+    expect(series.label.formatter({ value: 30 })).toBe('30万元')
+    expect(series.label.formatter({ value: null })).toBe('')
   })
 
-  test.each([
-    { responsive: true },
-    { responsive: false, forExport: true },
-  ])('keeps chart padding stable when details are toggled', (options) => {
-    const model = lineModel('straight')
-    const paddingWithoutDetails = createChartConfig(model, options).options?.layout?.padding
+  test.each([false, true])('keeps the plot grid stable when details are %s', (forExport) => {
+    const model = lineModel('smooth')
+    const gridWithoutDetails = createChartOption(model, { forExport }).grid
 
-    model.settings = {
-      ...model.settings,
-      showDetails: true,
-      detailLabelFontSize: 32,
-    }
-    const paddingWithDetails = createChartConfig(model, options).options?.layout?.padding
+    model.settings = { ...model.settings, showDetailLabels: true, detailLabelFontSize: 32 }
+    const gridWithDetails = createChartOption(model, { forExport }).grid
 
-    expect(paddingWithDetails).toEqual(paddingWithoutDetails)
+    expect(gridWithDetails).toEqual(gridWithoutDetails)
   })
 })
+
+function barModel(): BarChartModel {
+  return {
+    title: '销售',
+    xAxisFieldId: 0,
+    labels: ['华东'],
+    series: [{ fieldId: 1, fieldName: '销售额', color: '#2563EB', values: [86] }],
+    settings: { ...createDefaultChartSettings(), chartType: 'bar' },
+  }
+}

@@ -5,7 +5,8 @@ export {
   resolveChart,
   yAxisFieldUnavailableReason,
 } from './chartModel'
-export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createChartConfig } from './chartConfig'
+export { CHART_BLUE, CHART_FONT, SERIES_COLORS, createChartOption } from './chartConfig'
+export type { ChartOption } from './chartConfig'
 export {
   SERIES_COLOR_SCHEMES,
   DEFAULT_AXIS_NAME_COLOR,

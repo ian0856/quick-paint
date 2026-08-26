@@ -3,14 +3,14 @@ import { ElColorPicker, ElInputNumber, ElSwitch } from 'element-plus'
 import { MAX_CHART_FONT_SIZE, MIN_CHART_FONT_SIZE } from '../utils'
 
 defineProps<{
-  showDetails: boolean
+  showDetailLabels: boolean
   fontSize: number
   color: string
   disabled: boolean
 }>()
 
 const emit = defineEmits<{
-  updateShowDetails: [value: boolean]
+  updateShowDetailLabels: [value: boolean]
   updateFontSize: [value: number]
   updateColor: [value: string]
 }>()
@@ -29,14 +29,14 @@ function updateColor(color: string | null) {
     <div class="flex items-center justify-between gap-3">
       <h3 id="chart-detail-settings-title" class="m-0 text-xs font-600 text-text-strong">显示详情</h3>
       <ElSwitch
-        :model-value="showDetails"
+        :model-value="showDetailLabels"
         :disabled="disabled"
         aria-label="显示数据详情"
-        @change="emit('updateShowDetails', $event as boolean)"
+        @change="emit('updateShowDetailLabels', $event as boolean)"
       />
     </div>
 
-    <div v-if="showDetails" class="mt-4 border-t border-base pt-4">
+    <div v-if="showDetailLabels" class="mt-4 border-t border-base pt-4">
       <h4 class="m-0 text-xs font-600 text-text-strong">详情字段</h4>
       <div class="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         <div>

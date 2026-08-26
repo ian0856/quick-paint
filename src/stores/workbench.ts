@@ -307,13 +307,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
-  function updateShowLineArea(showLineArea: boolean) {
-    chartSettings.value = { ...chartSettings.value, showLineArea }
+  function updateAreaFill(areaFill: boolean) {
+    chartSettings.value = { ...chartSettings.value, areaFill }
     finishChartChange()
   }
 
-  function updateShowDetails(showDetails: boolean) {
-    chartSettings.value = { ...chartSettings.value, showDetails }
+  function updateShowDetailLabels(showDetailLabels: boolean) {
+    chartSettings.value = { ...chartSettings.value, showDetailLabels }
     finishChartChange()
   }
 
@@ -553,8 +553,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     reorderYAxisFields,
     updateChartType,
     updateLineStyle,
-    updateShowLineArea,
-    updateShowDetails,
+    updateAreaFill,
+    updateShowDetailLabels,
     updateDetailLabelFontSize,
     updateDetailLabelColor,
     updateTitle,

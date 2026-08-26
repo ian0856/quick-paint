@@ -12,8 +12,8 @@ describe('chart settings', () => {
   test('uses visible axis names and the existing tick appearance by default', () => {
     expect(createDefaultChartSettings()).toMatchObject({
       lineStyle: 'straight',
-      showLineArea: false,
-      showDetails: false,
+      areaFill: false,
+      showDetailLabels: false,
       detailLabelFontSize: 11,
       detailLabelColor: '#344054',
       xAxisName: 'x轴',

@@ -7,7 +7,7 @@ import { useWorkbenchStore } from '../../../stores/workbench'
 import AxisSettings from './AxisSettings.vue'
 import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
-import ChartDetailSettings from './ChartDetailSettings.vue'
+import ChartDetailLabelSettings from './ChartDetailLabelSettings.vue'
 import ChartLabelSettings from './ChartLabelSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
 import ChartTypeSettings from './ChartTypeSettings.vue'
@@ -48,20 +48,20 @@ const diagnostic = computed(() => {
         <ChartTypeSettings
           :chart-type="chartSettings.chartType"
           :line-style="chartSettings.lineStyle"
-          :show-line-area="chartSettings.showLineArea"
+          :area-fill="chartSettings.areaFill"
           :disabled="chartSettingsDisabled"
           @update-chart-type="store.updateChartType"
           @update-line-style="store.updateLineStyle"
-          @update-show-line-area="store.updateShowLineArea"
+          @update-area-fill="store.updateAreaFill"
         />
       </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
-        <ChartDetailSettings
-          :show-details="chartSettings.showDetails"
+        <ChartDetailLabelSettings
+          :show-detail-labels="chartSettings.showDetailLabels"
           :font-size="chartSettings.detailLabelFontSize"
           :color="chartSettings.detailLabelColor"
           :disabled="chartSettingsDisabled"
-          @update-show-details="store.updateShowDetails"
+          @update-show-detail-labels="store.updateShowDetailLabels"
           @update-font-size="store.updateDetailLabelFontSize"
           @update-color="store.updateDetailLabelColor"
         />

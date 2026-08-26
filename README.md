@@ -1,6 +1,6 @@
 # Quick Paint
 
-Quick Paint turns a local `.xlsx` or UTF-8 `.csv` file into a downloadable bar chart. Files are interpreted in a Web Worker and remain in the browser.
+Quick Paint turns a local `.xlsx` or UTF-8 `.csv` file into a downloadable Bar Chart or Line Chart. Files are interpreted in a Web Worker and remain in the browser; Charts are rendered with modular ECharts Canvas imports.
 
 ## Development
 

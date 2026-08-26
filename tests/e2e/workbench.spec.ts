@@ -71,6 +71,8 @@ test('imports CSV, switches to the read-only table, and exports a real PNG', asy
     const matrix = new DOMMatrix(getComputedStyle(element).transform)
     return { x: matrix.e, y: matrix.f }
   })).not.toEqual(transformBeforeDrag)
+  await page.mouse.move(panelBox!.x + panelBox!.width / 2, panelBox!.y + panelBox!.height / 2)
+  await expect(page.locator('.chart-panel div[style*="z-index: 9999999"]')).toBeVisible()
 
   await page.getByRole('textbox', { name: '图表标题' }).fill('更新后的标题')
   const updatedChartCanvas = page.getByRole('img', { name: '柱状图：更新后的标题，共 3 条数据，1 个数值系列' })
@@ -104,7 +106,274 @@ test('imports CSV, switches to the read-only table, and exports a real PNG', asy
   expect(png.readUInt32BE(16)).toBe(1600)
   expect(png.readUInt32BE(20)).toBe(900)
   expect(png.byteLength).toBeGreaterThan(10_000)
+  const pixels = await inspectPngPixels(page, png, [[37, 99, 235]])
+  expect(pixels.corners).toEqual([
+    [255, 255, 255, 255],
+    [255, 255, 255, 255],
+    [255, 255, 255, 255],
+    [255, 255, 255, 255],
+  ])
+  expect(pixels.nonWhiteSamples).toBeGreaterThan(100)
+  expect(pixels.targetColorSamples[0]).toBeGreaterThan(100)
 })
+
+test('renders ECharts tooltips and details without duplicating or resizing the Chart surface', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', error => browserErrors.push(error.message))
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/workbench')
+  await importFile(page, '趋势.csv', 'text/csv', Buffer.from([
+    '月份,销售额,利润',
+    '一月,20,2',
+    '二月,25,3',
+    '三月,28,4',
+  ].join('\n')))
+
+  const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
+  await settings.getByRole('textbox', { name: 'y轴单位' }).fill('万元')
+  const barSurface = page.getByRole('img', { name: '柱状图：Sheet1，共 3 条数据，2 个数值系列' })
+  await expect(barSurface).toBeVisible()
+  await hoverAtChartCenter(page, barSurface)
+  let tooltip = page.locator('.chart-panel div[style*="z-index: 9999999"]')
+  await expect(tooltip).toBeVisible()
+  await expect(tooltip).toContainText('二月')
+  await expect(tooltip).toContainText('销售额25万元')
+  await expect(tooltip).toContainText('利润3万元')
+
+  const canvas = page.locator('.chart-panel canvas')
+  const detailSwitch = settings.getByRole('switch', { name: '显示数据详情' })
+  const barSurfaceSize = await barSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))
+  const barWithoutDetailLabels = await canvasFingerprint(canvas)
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
+  await expect(detailSwitch).toBeChecked()
+  await expect.poll(() => canvasFingerprint(canvas)).not.toBe(barWithoutDetailLabels)
+  await expect(barSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))).resolves.toEqual(barSurfaceSize)
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
+  await expect(detailSwitch).not.toBeChecked()
+
+  await settings.getByText('折线图', { exact: true }).click()
+  await settings.getByText('平滑', { exact: true }).click()
+  await settings.locator('.el-switch:has(input[aria-label="显示线下半透明面积"])').click()
+  const lineSurface = page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })
+  await expect(lineSurface).toBeVisible()
+  await hoverAtChartPosition(page, lineSurface, 0.5, 0.22)
+  tooltip = page.locator('.chart-panel div[style*="z-index: 9999999"]')
+  await expect(tooltip).toBeVisible()
+  const tooltipText = (await tooltip.innerText()).replace(/\s/g, '')
+  expect(tooltipText).toContain('二月')
+  expect(tooltipText.indexOf('销售额25万元')).toBeLessThan(tooltipText.indexOf('利润3万元'))
+
+  await expect(canvas).toHaveCount(1)
+  const surfaceSize = await lineSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))
+  const fingerprintWithoutDetails = await canvasFingerprint(canvas)
+  await expect(detailSwitch).not.toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
+  await expect(detailSwitch).toBeChecked()
+  await expect.poll(() => canvasFingerprint(canvas)).not.toBe(fingerprintWithoutDetails)
+  await expect(lineSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))).resolves.toEqual(surfaceSize)
+
+  await setChartColor(page, settings, '详情字段字体颜色', '#8B1E3F')
+  const fingerprintWithConfiguredColor = await canvasFingerprint(canvas)
+  const detailPixels = await canvasColorStats(canvas, [139, 30, 63], { x: [0.08, 0.97], y: [0.12, 0.88] })
+  expect(detailPixels.count).toBeGreaterThan(5)
+
+  const detailFontSize = settings.getByRole('spinbutton', { name: '详情字段字体大小' })
+  await detailFontSize.fill('18')
+  await detailFontSize.press('Enter')
+  await expect(detailFontSize).toHaveValue('18')
+  await expect.poll(() => canvasFingerprint(canvas)).not.toBe(fingerprintWithConfiguredColor)
+  await expect(canvas).toHaveCount(1)
+  await expect(lineSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))).resolves.toEqual(surfaceSize)
+
+  for (const viewport of [{ width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await expect(lineSurface).toBeVisible()
+    const resizedSurfaceSize = await lineSurface.evaluate(element => [element.clientWidth, element.clientHeight])
+    expect(resizedSurfaceSize[0]).toBeGreaterThan(0)
+    expect(resizedSurfaceSize[1]).toBeGreaterThan(0)
+    await expect.poll(() => canvas.evaluate(element => [element.clientWidth, element.clientHeight]))
+      .toEqual(resizedSurfaceSize)
+    expect(await canvasFingerprint(canvas)).not.toBe(0)
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await importFile(page, '密集趋势.csv', 'text/csv', Buffer.from([
+    '月份,销售额',
+    ...Array.from({ length: 40 }, (_, index) => `${index + 1}月,10`),
+  ].join('\n')))
+  await settings.getByText('折线图', { exact: true }).click()
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
+  await setChartColor(page, settings, '详情字段字体颜色', '#8B1E3F')
+  const denseCanvas = page.locator('.chart-panel canvas')
+  const denseDetailStats = await canvasColorStats(denseCanvas, [139, 30, 63], { x: [0.08, 0.97], y: [0.12, 0.88] })
+  const denseLineStats = await canvasColorStats(denseCanvas, [37, 99, 235], { x: [0.08, 0.97], y: [0.12, 0.88] })
+  expect(denseDetailStats.count).toBeGreaterThan(5)
+  expect(denseDetailStats.maxY).toBeLessThan(denseLineStats.minY)
+  expect(denseDetailStats.columnCount).toBeLessThan(denseDetailStats.canvasWidth * 0.5)
+  expect(browserErrors).toEqual([])
+})
+
+async function hoverAtChartCenter(page: Page, chartSurface: ReturnType<Page['getByRole']>) {
+  await hoverAtChartPosition(page, chartSurface, 0.5, 0.5)
+}
+
+async function hoverAtChartPosition(
+  page: Page,
+  chartSurface: ReturnType<Page['getByRole']>,
+  xRatio: number,
+  yRatio: number,
+) {
+  const box = await chartSurface.boundingBox()
+  if (!box) throw new Error('Chart surface has no visible bounds')
+  await page.mouse.move(box.x + box.width * xRatio, box.y + box.height * yRatio)
+}
+
+async function canvasFingerprint(canvas: ReturnType<Page['locator']>) {
+  return canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')
+    if (!context) return 0
+    const pixels = context.getImageData(0, 0, context.canvas.width, context.canvas.height).data
+    let fingerprint = 2166136261
+    for (let index = 0; index < pixels.length; index += 16) {
+      fingerprint = Math.imul(fingerprint ^ pixels[index]!, 16777619)
+    }
+    return fingerprint >>> 0
+  })
+}
+
+async function canvasColorStats(
+  canvas: ReturnType<Page['locator']>,
+  color: number[],
+  region: { x: [number, number], y: [number, number] },
+) {
+  return canvas.evaluate((element, { color, region }) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')!
+    const { width, height } = context.canvas
+    const pixels = context.getImageData(0, 0, width, height).data
+    const columns = new Set<number>()
+    let count = 0
+    let minX = width
+    let maxX = -1
+    let minY = height
+    let maxY = -1
+    for (let y = Math.floor(height * region.y[0]); y < Math.ceil(height * region.y[1]); y += 1) {
+      for (let x = Math.floor(width * region.x[0]); x < Math.ceil(width * region.x[1]); x += 1) {
+        const index = (y * width + x) * 4
+        if (pixels[index] === color[0] && pixels[index + 1] === color[1] && pixels[index + 2] === color[2]) {
+          count += 1
+          columns.add(x)
+          minX = Math.min(minX, x)
+          maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y)
+          maxY = Math.max(maxY, y)
+        }
+      }
+    }
+    return { count, columnCount: columns.size, minX, maxX, minY, maxY, canvasWidth: width, canvasHeight: height }
+  }, { color, region })
+}
+
+async function setChartColor(
+  page: Page,
+  settings: ReturnType<Page['getByRole']>,
+  accessibleName: string,
+  color: string,
+) {
+  const trigger = settings.getByRole('button', { name: accessibleName })
+  await trigger.click()
+  const dialog = page.getByRole('dialog').filter({ has: page.getByRole('slider', { name: 'pick hue value' }) })
+  const input = dialog.locator('input:visible')
+  await input.fill(color)
+  await input.press('Enter')
+  await dialog.locator('button:visible').filter({ hasText: 'OK' }).evaluate((button: HTMLButtonElement) => button.click())
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await expect(trigger).toHaveAttribute('aria-description', new RegExp(color, 'i'))
+}
+
+async function inspectPngPixels(
+  page: Page,
+  png: Buffer,
+  targetColors: number[][] = [],
+  targetRegions: Array<{ color: number[], x: [number, number], y: [number, number] }> = [],
+) {
+  return page.evaluate(async ({ encoded, targetColors, targetRegions }) => {
+    const image = new Image()
+    image.src = `data:image/png;base64,${encoded}`
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+    const context = canvas.getContext('2d')!
+    context.drawImage(image, 0, 0)
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+    const pixelAt = (x: number, y: number) => {
+      const index = (y * canvas.width + x) * 4
+      return Array.from(pixels.slice(index, index + 4))
+    }
+    let nonWhiteSamples = 0
+    const targetColorSamples = targetColors.map(() => 0)
+    const targetRegionPixels = targetRegions.map(() => 0)
+    for (let y = 0; y < canvas.height; y += 8) {
+      for (let x = 0; x < canvas.width; x += 8) {
+        const index = (y * canvas.width + x) * 4
+        if (pixels[index] !== 255 || pixels[index + 1] !== 255 || pixels[index + 2] !== 255) {
+          nonWhiteSamples += 1
+        }
+        targetColors.forEach((color, colorIndex) => {
+          if (pixels[index] === color[0] && pixels[index + 1] === color[1] && pixels[index + 2] === color[2]) {
+            targetColorSamples[colorIndex]! += 1
+          }
+        })
+      }
+    }
+    targetRegions.forEach((region, regionIndex) => {
+      const xStart = Math.floor(canvas.width * region.x[0])
+      const xEnd = Math.ceil(canvas.width * region.x[1])
+      const yStart = Math.floor(canvas.height * region.y[0])
+      const yEnd = Math.ceil(canvas.height * region.y[1])
+      for (let y = yStart; y < yEnd; y += 1) {
+        for (let x = xStart; x < xEnd; x += 1) {
+          const index = (y * canvas.width + x) * 4
+          if (
+            pixels[index] === region.color[0]
+            && pixels[index + 1] === region.color[1]
+            && pixels[index + 2] === region.color[2]
+          ) targetRegionPixels[regionIndex]! += 1
+        }
+      }
+    })
+    return {
+      corners: [
+        pixelAt(0, 0),
+        pixelAt(canvas.width - 1, 0),
+        pixelAt(0, canvas.height - 1),
+        pixelAt(canvas.width - 1, canvas.height - 1),
+      ],
+      nonWhiteSamples,
+      targetColorSamples,
+      targetRegionPixels,
+    }
+  }, { encoded: png.toString('base64'), targetColors, targetRegions })
+}
 
 test('uses the first field for the x axis before selecting the default y axis fields', async ({ page }) => {
   const ambiguousCategoryCsv = Buffer.from([
@@ -214,6 +483,7 @@ test('selects an available worksheet and preserves the current chart when replac
 })
 
 test('shows a centered parsing error when the first file is invalid', async ({ page }) => {
+  await page.route('**/*.xlsx', route => route.abort())
   await page.goto('/workbench')
   await importFile(page, '错误.csv', 'text/csv', Buffer.from([0xff, 0xfe, 0xfd]))
 
@@ -260,6 +530,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
 
   await settings.getByRole('textbox', { name: '图表标题' }).fill('销售报表')
+  await setChartColor(page, settings, '图表标题字体颜色', '#123456')
   const titleFontSize = settings.getByRole('spinbutton', { name: '图表标题字体大小' })
   await titleFontSize.press('ArrowUp')
   await expect(titleFontSize).toHaveValue('19')
@@ -287,8 +558,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByText('直线', { exact: true })).toBeVisible()
   await settings.getByText('平滑', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: '平滑' })).toBeChecked()
-  await settings.getByText('面积', { exact: true }).click()
-  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
+  const areaSwitch = settings.getByRole('switch', { name: '显示线下半透明面积' })
+  await expect(areaSwitch).not.toBeChecked()
+  await settings.locator('.el-switch:has(input[aria-label="显示线下半透明面积"])').click()
+  await expect(areaSwitch).toBeChecked()
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')).toHaveText(['销售额', '利润'])
 
@@ -317,15 +590,25 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('spinbutton', { name: '图表标签字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('spinbutton', { name: 'x轴刻度文本字体大小' })).toHaveValue('12')
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
-  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
+  await expect(settings.getByRole('radio', { name: '平滑' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
   await settings.getByText('柱状图', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: '柱状图' })).toBeChecked()
   await expect(settings.getByText('120 px')).toBeVisible()
   await settings.getByText('折线图', { exact: true }).click()
-  await expect(settings.getByRole('radio', { name: '面积' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByText('固定', { exact: true })).toBeVisible()
   await expect(settings.getByRole('button', { name: /恢复默认/ })).toHaveCount(0)
+  await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
+  await expect(settings.getByRole('switch', { name: '显示数据详情' })).toBeChecked()
+  await setChartColor(page, settings, '详情字段字体颜色', '#8B1E3F')
+
+  const configuredPreview = page.locator('.chart-panel canvas')
+  for (const color of [[18, 52, 86], [52, 64, 84], [139, 30, 63]]) {
+    const stats = await canvasColorStats(configuredPreview, color, { x: [0, 1], y: [0, 1] })
+    expect(stats.count).toBeGreaterThan(5)
+  }
 
   await page.getByText('表格', { exact: true }).click()
   const downloadPromise = page.waitForEvent('download')
@@ -340,6 +623,22 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   expect(png.readUInt32BE(16)).toBe(1600)
   expect(png.readUInt32BE(20)).toBe(900)
   expect(png.byteLength).toBeGreaterThan(10_000)
+  const pixels = await inspectPngPixels(
+    page,
+    png,
+    [[78, 121, 167], [242, 142, 43]],
+    [
+      { color: [18, 52, 86], x: [0.2, 0.8], y: [0, 0.1] },
+      { color: [78, 121, 167], x: [0.35, 0.5], y: [0.07, 0.14] },
+      { color: [242, 142, 43], x: [0.5, 0.65], y: [0.07, 0.14] },
+      { color: [52, 64, 84], x: [0.2, 0.9], y: [0.82, 1] },
+      { color: [52, 64, 84], x: [0, 0.18], y: [0.12, 0.9] },
+      { color: [139, 30, 63], x: [0.06, 0.98], y: [0.12, 0.88] },
+    ],
+  )
+  expect(pixels.targetColorSamples[0]).toBeGreaterThan(5)
+  expect(pixels.targetColorSamples[1]).toBeGreaterThan(5)
+  expect(pixels.targetRegionPixels.every(count => count > 5)).toBe(true)
 })
 
 test('keeps Line Chart settings through invalid mapping recovery and resets them for a new Data Source', async ({ page }) => {
@@ -355,7 +654,15 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
   await settings.getByText('折线图', { exact: true }).click()
   await settings.getByText('平滑', { exact: true }).click()
-  await expect(page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })).toBeVisible()
+  const sparseLineSurface = page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })
+  await expect(sparseLineSurface).toBeVisible()
+  const sparseCanvas = page.locator('.chart-panel canvas')
+  const firstPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.25, 0.4], y: [0.12, 0.88] })
+  const missingPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.48, 0.62], y: [0.12, 0.88] })
+  const lastPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.74, 0.88], y: [0.12, 0.88] })
+  expect(firstPoint.count).toBeGreaterThan(5)
+  expect(missingPoint.count).toBe(0)
+  expect(lastPoint.count).toBeGreaterThan(5)
   const sparseLineData = page.getByRole('table', { name: '折线图数据' })
   await expect(sparseLineData).toBeAttached()
   await expect(sparseLineData.getByRole('row').nth(2)).toContainText('（空白）')

@@ -1,5 +1,7 @@
 # Chart.js hover 竖直虚线调研
 
+> **Superseded by ADR-0007.** Quick Paint no longer uses Chart.js. ECharts axis-triggered tooltips and axis pointers now provide the same-Record guide and ordered Value Series values without a custom renderer plugin.
+
 ## 结论
 
 Chart.js 4.5.1 没有用于“hover 到折线图 Point 时绘制竖直虚线”的内置配置。官方 Line Chart 配置只提供折线、Point 及其 hover 样式；其中 `borderDash` 控制的是数据折线本身，不是 hover guide。官方将额外绘制行为放在 Plugin API 中，因此这里应使用一个小型内联插件。[Line Chart 配置](https://www.chartjs.org/docs/4.5.1/charts/line.html#dataset-properties) · [Element 配置](https://www.chartjs.org/docs/4.5.1/configuration/elements.html#line-configuration) · [Plugin 文档](https://www.chartjs.org/docs/4.5.1/developers/plugins.html)

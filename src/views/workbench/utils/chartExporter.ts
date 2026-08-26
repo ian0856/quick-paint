@@ -1,35 +1,49 @@
-import { Chart } from 'chart.js/auto'
-import { CHART_FONT, createChartConfig } from './chartConfig'
+import { init } from 'echarts/core'
+import type { ECharts } from 'echarts/core'
+import { CHART_FONT, createChartOption } from './chartConfig'
 import type { ChartModel } from './model'
+
+const EXPORT_WIDTH = 1600
+const EXPORT_HEIGHT = 900
 
 export type ChartExport = { blob: Blob; fileName: string }
 
 export async function exportChartImage(model: ChartModel): Promise<ChartExport> {
   await loadChartFont(model.settings.titleFontSize)
-  const canvas = document.createElement('canvas')
-  canvas.width = 1600
-  canvas.height = 900
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('当前浏览器无法创建图片画布。')
+  validateTitleWidth(model)
 
-  context.font = `700 ${model.settings.titleFontSize}px "${CHART_FONT}"`
-  if (context.measureText(model.title).width > 1480) {
-    throw new Error('图表标题过长，无法完整放入导出图片。')
-  }
+  const host = createExportHost()
+  document.body.append(host)
+  let chart: ECharts | null = null
 
-  const chart = new Chart(context, createChartConfig(model, { responsive: false, forExport: true }))
   try {
-    chart.update('none')
+    chart = init(host, undefined, {
+      renderer: 'canvas',
+      width: EXPORT_WIDTH,
+      height: EXPORT_HEIGHT,
+      devicePixelRatio: 1,
+    })
+    await renderChart(chart, model)
+    const canvas = host.querySelector('canvas')
+    const context = canvas?.getContext('2d')
+    if (!canvas || !context || canvas.width !== EXPORT_WIDTH || canvas.height !== EXPORT_HEIGHT) {
+      throw new Error('当前浏览器无法创建图片画布。')
+    }
     if (!hasVisiblePlot(context, canvas.width, canvas.height)) {
       throw new Error('图表没有生成可见内容。')
     }
-    const blob = await canvasToPng(canvas)
+
+    const blob = dataUrlToPng(chart.getDataURL({
+      type: 'png',
+      pixelRatio: 1,
+      backgroundColor: '#ffffff',
+    }))
     if (blob.size === 0) throw new Error('PNG 编码失败。')
     return { blob, fileName: `${sanitizeFileName(model.title)}.png` }
   }
   finally {
-    chart.destroy()
-    canvas.remove()
+    chart?.dispose()
+    host.remove()
   }
 }
 
@@ -51,6 +65,55 @@ export function sanitizeFileName(title: string) {
   return normalized || 'quick-paint-chart'
 }
 
+function createExportHost() {
+  const host = document.createElement('div')
+  host.style.position = 'fixed'
+  host.style.left = '-10000px'
+  host.style.top = '0'
+  host.style.width = `${EXPORT_WIDTH}px`
+  host.style.height = `${EXPORT_HEIGHT}px`
+  host.style.background = '#ffffff'
+  host.setAttribute('aria-hidden', 'true')
+  return host
+}
+
+function renderChart(chart: ECharts, model: ChartModel) {
+  return new Promise<void>((resolve, reject) => {
+    let timeoutId = 0
+    const finish = () => {
+      window.clearTimeout(timeoutId)
+      chart.off('finished', finish)
+      resolve()
+    }
+    chart.on('finished', finish)
+    timeoutId = window.setTimeout(() => {
+      chart.off('finished', finish)
+      reject(new Error('图表渲染超时，请重试。'))
+    }, 3000)
+    try {
+      chart.setOption(createChartOption(model, { forExport: true }), {
+        notMerge: true,
+        lazyUpdate: false,
+      })
+    }
+    catch (error) {
+      window.clearTimeout(timeoutId)
+      chart.off('finished', finish)
+      reject(error)
+    }
+  })
+}
+
+function validateTitleWidth(model: ChartModel) {
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('当前浏览器无法创建图片画布。')
+  context.font = `700 ${model.settings.titleFontSize}px "${CHART_FONT}"`
+  if (context.measureText(model.title).width > 1480) {
+    throw new Error('图表标题过长，无法完整放入导出图片。')
+  }
+}
+
 async function loadChartFont(titleFontSize: number) {
   if (!document.fonts) return
   let timeoutId = 0
@@ -65,7 +128,7 @@ async function loadChartFont(titleFontSize: number) {
       ]),
       timeout,
     ])
-    if (loaded.some((fonts) => fonts.length === 0)) {
+    if (loaded.some(fonts => fonts.length === 0)) {
       throw new Error('图表字体不可用，无法导出。')
     }
   }
@@ -85,8 +148,11 @@ function hasVisiblePlot(context: CanvasRenderingContext2D, width: number, height
   return false
 }
 
-function canvasToPng(canvas: HTMLCanvasElement) {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG 编码失败。')), 'image/png')
-  })
+function dataUrlToPng(dataUrl: string) {
+  const [header, encoded] = dataUrl.split(',', 2)
+  if (header !== 'data:image/png;base64' || !encoded) throw new Error('PNG 编码失败。')
+  const binary = window.atob(encoded)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return new Blob([bytes], { type: 'image/png' })
 }
