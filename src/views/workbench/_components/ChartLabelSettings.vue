@@ -18,7 +18,7 @@ function updateFontSize(value: number | undefined) {
 
 <template>
   <section aria-labelledby="chart-label-settings-title">
-    <h3 id="chart-label-settings-title" class="m-0 text-xs font-600 text-text-strong">图表标签</h3>
+    <h3 id="chart-label-settings-title" class="m-0 text-xs font-600 text-text-strong">图像标签</h3>
     <label class="control-label block" for="chart-label-font-size">字体大小</label>
     <ElInputNumber
       id="chart-label-font-size"
@@ -30,7 +30,7 @@ function updateFontSize(value: number | undefined) {
       :step="1"
       :precision="0"
       controls-position="right"
-      aria-label="图表标签字体大小"
+      aria-label="图像标签字体大小"
       @change="updateFontSize"
     />
   </section>

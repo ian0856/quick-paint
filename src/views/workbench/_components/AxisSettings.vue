@@ -11,6 +11,7 @@ import {
 } from '../utils'
 
 const props = defineProps<{
+  axis: 'x' | 'y'
   xAxisName: string
   yAxisName: string
   xAxisNameFontSize: number
@@ -104,19 +105,10 @@ function updateYAxisTickLabelColor(color: string | null) {
 </script>
 
 <template>
-  <section aria-labelledby="axis-settings-title">
-    <h3 id="axis-settings-title" class="m-0 text-xs font-600 text-text-strong">坐标轴</h3>
+  <section class="py-5" :aria-labelledby="`${axis}-axis-settings-title`">
+    <h3 :id="`${axis}-axis-settings-title`" class="m-0 text-xs font-600 text-text-strong">{{ axis }}轴</h3>
 
-    <div class="mt-3 flex items-center justify-between gap-3">
-      <span class="text-xs font-600 text-text-strong">显示 Y 轴分割线</span>
-      <ElSwitch
-        :model-value="showYAxisSplitLines"
-        :disabled="disabled"
-        aria-label="显示 Y 轴分割线"
-        @change="emit('updateShowYAxisSplitLines', $event as boolean)"
-      />
-    </div>
-
+    <template v-if="axis === 'x'">
     <label class="control-label block" for="x-axis-name">x轴名称</label>
     <ElInput
       id="x-axis-name"
@@ -155,6 +147,48 @@ function updateYAxisTickLabelColor(color: string | null) {
           @change="updateXAxisNameColor"
         />
       </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+      <div>
+        <label class="control-label mt-0 block" for="x-axis-tick-label-font-size">x轴刻度文本字体大小</label>
+        <ElInputNumber
+          id="x-axis-tick-label-font-size"
+          class="mt-1 w-full"
+          :model-value="xAxisTickLabelFontSize"
+          :disabled="disabled"
+          :min="MIN_CHART_FONT_SIZE"
+          :max="MAX_CHART_FONT_SIZE"
+          :step="1"
+          :precision="0"
+          controls-position="right"
+          aria-label="x轴刻度文本字体大小"
+          @change="updateXAxisTickLabelFontSize"
+        />
+      </div>
+      <div>
+        <span class="control-label mt-0 block">文本颜色</span>
+        <ElColorPicker
+          class="mt-1"
+          :model-value="xAxisTickLabelColor"
+          :disabled="disabled"
+          :show-alpha="false"
+          aria-label="x轴刻度文本颜色"
+          @change="updateXAxisTickLabelColor"
+        />
+      </div>
+    </div>
+    </template>
+
+    <template v-else>
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <span class="text-xs font-600 text-text-strong">显示 Y 轴分割线</span>
+      <ElSwitch
+        :model-value="showYAxisSplitLines"
+        :disabled="disabled"
+        aria-label="显示 Y 轴分割线"
+        @change="emit('updateShowYAxisSplitLines', $event as boolean)"
+      />
     </div>
 
     <label class="control-label block" for="y-axis-name">y轴名称</label>
@@ -207,36 +241,6 @@ function updateYAxisTickLabelColor(color: string | null) {
       @input="emit('updateYAxisUnit', $event)"
     />
 
-    <div class="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
-      <div>
-        <label class="control-label mt-0 block" for="x-axis-tick-label-font-size">x轴刻度文本字体大小</label>
-        <ElInputNumber
-          id="x-axis-tick-label-font-size"
-          class="mt-1 w-full"
-          :model-value="xAxisTickLabelFontSize"
-          :disabled="disabled"
-          :min="MIN_CHART_FONT_SIZE"
-          :max="MAX_CHART_FONT_SIZE"
-          :step="1"
-          :precision="0"
-          controls-position="right"
-          aria-label="x轴刻度文本字体大小"
-          @change="updateXAxisTickLabelFontSize"
-        />
-      </div>
-      <div>
-        <span class="control-label mt-0 block">文本颜色</span>
-        <ElColorPicker
-          class="mt-1"
-          :model-value="xAxisTickLabelColor"
-          :disabled="disabled"
-          :show-alpha="false"
-          aria-label="x轴刻度文本颜色"
-          @change="updateXAxisTickLabelColor"
-        />
-      </div>
-    </div>
-
     <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
       <div>
         <label class="control-label mt-0 block" for="y-axis-tick-label-font-size">y轴刻度文本字体大小</label>
@@ -288,5 +292,6 @@ function updateYAxisTickLabelColor(color: string | null) {
       />
       <p v-if="intervalError" class="m-0 mt-1 text-[11px] leading-4 text-danger" role="alert">{{ intervalError }}</p>
     </div>
+    </template>
   </section>
 </template>

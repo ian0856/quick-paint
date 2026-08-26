@@ -27,13 +27,13 @@ const lineStyleOptions = [
 
 <template>
   <section aria-labelledby="chart-type-settings-title">
-    <h3 id="chart-type-settings-title" class="m-0 text-xs font-600 text-text-strong">图表类型</h3>
+    <h3 id="chart-type-settings-title" class="m-0 text-xs font-600 text-text-strong">图像类型</h3>
     <ElSegmented
       class="mt-3 w-full"
       :model-value="chartType"
       :options="chartTypeOptions"
       :disabled="disabled"
-      aria-label="图表类型"
+      aria-label="图像类型"
       @change="emit('updateChartType', $event as ChartType)"
     />
 
