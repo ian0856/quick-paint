@@ -25,6 +25,7 @@ export {
   MIN_CHART_FONT_SIZE,
   colorsForScheme,
   createDefaultChartSettings,
+  createDefaultYAxisFieldSelection,
   deriveSeriesGradientStartColor,
   firstAvailableSeriesColor,
   normalizeHexColor,

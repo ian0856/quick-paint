@@ -2,6 +2,7 @@ import type {
   SeriesColorSchemeId,
   SeriesColorSchemeSelection,
   ChartSettings,
+  FieldId,
   YAxisFieldSelection,
 } from './model'
 
@@ -55,7 +56,8 @@ export function createDefaultChartSettings(): ChartSettings {
     showDetailLabels: false,
     showDetailLabelsInsideBars: false,
     detailLabelFontSize: DEFAULT_DETAIL_LABEL_FONT_SIZE,
-    detailLabelColor: DEFAULT_DETAIL_LABEL_COLOR,
+    legendLayout: 'horizontal',
+    legendPosition: 'center',
     baseColorSchemeId: 'classic',
     title: '',
     titleFontSize: DEFAULT_CHART_TITLE_FONT_SIZE,
@@ -72,6 +74,18 @@ export function createDefaultChartSettings(): ChartSettings {
     yAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
     xAxisTickLabelColor: DEFAULT_AXIS_TICK_LABEL_COLOR,
     yAxisTickLabelColor: DEFAULT_AXIS_TICK_LABEL_COLOR,
+  }
+}
+
+export function createDefaultYAxisFieldSelection(
+  fieldId: FieldId,
+  color: string,
+): YAxisFieldSelection {
+  return {
+    fieldId,
+    color,
+    detailLabelColor: DEFAULT_DETAIL_LABEL_COLOR,
+    seriesGradient: false,
   }
 }
 

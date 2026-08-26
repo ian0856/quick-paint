@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   firstAvailableSeriesColor,
   createDefaultChartSettings,
+  createDefaultYAxisFieldSelection,
   deriveSeriesGradientStartColor,
   normalizeHexColor,
   recognizeColorScheme,
@@ -20,7 +21,8 @@ describe('chart settings', () => {
       showDetailLabels: false,
       showDetailLabelsInsideBars: false,
       detailLabelFontSize: 11,
-      detailLabelColor: '#344054',
+      legendLayout: 'horizontal',
+      legendPosition: 'center',
       xAxisName: 'x轴',
       title: '',
       titleFontSize: 18,
@@ -37,6 +39,12 @@ describe('chart settings', () => {
       xAxisTickLabelColor: '#667085',
       yAxisTickLabelColor: '#667085',
     })
+    expect(createDefaultYAxisFieldSelection(7, '#2563EB')).toEqual({
+      fieldId: 7,
+      color: '#2563EB',
+      detailLabelColor: '#344054',
+      seriesGradient: false,
+    })
   })
 
   test('derives a pronounced opaque gradient start by mixing the base color 65% toward white', () => {
@@ -47,19 +55,19 @@ describe('chart settings', () => {
 
   test('recognizes built-in schemes and reports manual combinations as custom', () => {
     expect(recognizeColorScheme([
-      { fieldId: 1, color: '#2563eb', seriesGradient: false },
-      { fieldId: 2, color: '#D97706', seriesGradient: false },
+      { fieldId: 1, color: '#2563eb', detailLabelColor: '#344054', seriesGradient: false },
+      { fieldId: 2, color: '#D97706', detailLabelColor: '#344054', seriesGradient: false },
     ])).toBe('classic')
     expect(recognizeColorScheme([
-      { fieldId: 1, color: '#123456', seriesGradient: false },
-      { fieldId: 2, color: '#D97706', seriesGradient: false },
+      { fieldId: 1, color: '#123456', detailLabelColor: '#344054', seriesGradient: false },
+      { fieldId: 2, color: '#D97706', detailLabelColor: '#344054', seriesGradient: false },
     ])).toBe('custom')
   })
 
   test('chooses the first unused color from the base scheme', () => {
     expect(firstAvailableSeriesColor('contrast', [
-      { fieldId: 1, color: '#0072B2', seriesGradient: false },
-      { fieldId: 2, color: '#009E73', seriesGradient: false },
+      { fieldId: 1, color: '#0072B2', detailLabelColor: '#344054', seriesGradient: false },
+      { fieldId: 2, color: '#009E73', detailLabelColor: '#344054', seriesGradient: false },
     ])).toBe('#E69F00')
   })
 

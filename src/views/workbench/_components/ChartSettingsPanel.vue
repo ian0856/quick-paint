@@ -41,6 +41,7 @@ const series = computed(() => yAxisFields.value.flatMap((selection) => {
         fieldId: field.id,
         label: field.label,
         color: selection.color,
+        detailLabelColor: selection.detailLabelColor,
         seriesGradient: selection.seriesGradient,
       }]
     : []
@@ -121,8 +122,12 @@ const diagnostic = computed(() => {
               <ChartLabelSettings
                 :key="worksheet?.id"
                 :font-size="chartSettings.chartLabelFontSize"
+                :layout="chartSettings.legendLayout"
+                :position="chartSettings.legendPosition"
                 :disabled="chartSettingsDisabled"
                 @update-font-size="store.updateChartLabelFontSize"
+                @update-layout="store.updateLegendLayout"
+                @update-position="store.updateLegendPosition"
               />
             </div>
             <div class="border-t border-base py-5">
@@ -131,7 +136,7 @@ const diagnostic = computed(() => {
                 :show-detail-labels="chartSettings.showDetailLabels"
                 :show-inside-bars="chartSettings.showDetailLabelsInsideBars"
                 :font-size="chartSettings.detailLabelFontSize"
-                :color="chartSettings.detailLabelColor"
+                :fields="series.map(item => ({ fieldId: item.fieldId, label: item.label, color: item.detailLabelColor }))"
                 :disabled="chartSettingsDisabled"
                 @update-show-detail-labels="store.updateShowDetailLabels"
                 @update-show-inside-bars="store.updateShowDetailLabelsInsideBars"

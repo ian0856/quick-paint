@@ -45,9 +45,10 @@ use([
 
 export function createChartOption(
   model: ChartModel,
-  options: { forExport?: boolean } = {},
+  options: { forExport?: boolean, chartWidth?: number } = {},
 ): ChartOption {
   const forExport = options.forExport === true
+  const legend = calculateLegendBox(model, options.chartWidth ?? (forExport ? 1600 : 960), forExport)
   const unit = model.settings.yAxisUnit.trim()
   const valueFormatter = (value: unknown) => formatValue(value, unit)
 
@@ -56,8 +57,8 @@ export function createChartOption(
     backgroundColor: forExport ? '#ffffff' : 'transparent',
     textStyle: { fontFamily: CHART_FONT },
     grid: forExport
-      ? { top: 132, right: 72, bottom: 90, left: 110, containLabel: true }
-      : { top: 104, right: 36, bottom: 62, left: 72, containLabel: true },
+      ? { top: Math.max(132, legend.top + legend.height + 32), right: 72, bottom: 90, left: 110, containLabel: true }
+      : { top: Math.max(104, legend.top + legend.height + 24), right: 36, bottom: 62, left: 72, containLabel: true },
     title: {
       text: model.title,
       left: 'center',
@@ -76,7 +77,11 @@ export function createChartOption(
             itemStyle: { color: series.color },
           }))
         : model.series.map(series => series.fieldName),
-      top: forExport ? 82 : 62,
+      top: legend.top,
+      width: legend.width,
+      height: legend.height,
+      orient: model.settings.legendLayout,
+      left: model.settings.legendPosition,
       itemWidth: forExport ? 20 : 14,
       itemHeight: forExport ? 12 : 9,
       itemGap: forExport ? 22 : 16,
@@ -149,6 +154,57 @@ export function createChartOption(
   }
 }
 
+function calculateLegendBox(model: ChartModel, chartWidth: number, forExport: boolean) {
+  const top = forExport ? 82 : 62
+  const itemWidth = forExport ? 20 : 14
+  const itemHeight = forExport ? 12 : 9
+  const itemGap = forExport ? 22 : 16
+  const markerTextGap = forExport ? 7 : 5
+  const fontSize = model.settings.chartLabelFontSize
+  const lineHeight = Math.ceil(Math.max(itemHeight, fontSize * 1.5))
+  const sideInset = forExport ? 72 : 36
+  const availableWidth = Math.max(1, chartWidth - sideInset * 2)
+  const itemWidths = model.series.map(series =>
+    Math.ceil(itemWidth + markerTextGap + estimatedTextWidth(series.fieldName, fontSize)),
+  )
+
+  if (model.settings.legendLayout === 'vertical') {
+    return {
+      top,
+      width: Math.min(availableWidth, Math.max(1, ...itemWidths)),
+      height: itemWidths.length * lineHeight + Math.max(0, itemWidths.length - 1) * itemGap,
+    }
+  }
+
+  let rowWidth = 0
+  let rowCount = itemWidths.length > 0 ? 1 : 0
+  let widestRow = 0
+  for (const itemWidthValue of itemWidths) {
+    const nextWidth = rowWidth === 0 ? itemWidthValue : rowWidth + itemGap + itemWidthValue
+    if (rowWidth > 0 && nextWidth > availableWidth) {
+      widestRow = Math.max(widestRow, rowWidth)
+      rowCount += 1
+      rowWidth = itemWidthValue
+    }
+    else {
+      rowWidth = nextWidth
+    }
+  }
+  widestRow = Math.max(widestRow, rowWidth)
+  return {
+    top,
+    width: Math.min(availableWidth, Math.max(1, widestRow)),
+    height: rowCount * lineHeight + Math.max(0, rowCount - 1) * itemGap,
+  }
+}
+
+function estimatedTextWidth(value: string, fontSize: number) {
+  return Array.from(value).reduce((width, character) => {
+    const isNarrow = /^[\u0000-\u00ff]$/.test(character)
+    return width + fontSize * (isNarrow ? 0.6 : 1)
+  }, 0)
+}
+
 function createBarSeries(
   model: ChartModel,
   series: ChartModel['series'][number],
@@ -170,7 +226,7 @@ function createBarSeries(
       borderRadius: model.settings.roundedBars ? 100 : 0,
     },
     emphasis: { focus: 'series' },
-    ...barDetailLabel(model, series.color, unit),
+    ...barDetailLabel(model, series.detailLabelColor, unit),
   }
 }
 
@@ -201,17 +257,17 @@ function createLineSeries(
       ? { areaStyle: { color: seriesColor, opacity: 0.15, origin: 'auto' as const } }
       : {}),
     emphasis: { focus: 'series', scale: 1.25 },
-    ...lineDetailLabel(model, unit),
+    ...lineDetailLabel(model, series.detailLabelColor, unit),
   }
 }
 
-function lineDetailLabel(model: ChartModel, unit: string) {
+function lineDetailLabel(model: ChartModel, detailLabelColor: string, unit: string) {
   return {
     label: {
       show: model.settings.showDetailLabels,
       position: 'top' as const,
       distance: 6,
-      color: model.settings.detailLabelColor,
+      color: detailLabelColor,
       fontFamily: CHART_FONT,
       fontSize: model.settings.detailLabelFontSize,
       fontWeight: 600,
@@ -221,14 +277,14 @@ function lineDetailLabel(model: ChartModel, unit: string) {
   }
 }
 
-function barDetailLabel(model: ChartModel, seriesColor: string, unit: string) {
+function barDetailLabel(model: ChartModel, detailLabelColor: string, unit: string) {
   const inside = model.settings.showDetailLabelsInsideBars
   return {
     label: {
       show: model.settings.showDetailLabels,
       position: inside ? 'inside' as const : 'top' as const,
       distance: inside ? 0 : 6,
-      color: inside ? contrastingTextColor(seriesColor) : model.settings.detailLabelColor,
+      color: detailLabelColor,
       fontFamily: CHART_FONT,
       fontSize: model.settings.detailLabelFontSize,
       fontWeight: 600,
@@ -266,19 +322,6 @@ function seriesGradient(baseColor: string) {
       { offset: 1, color: baseColor },
     ],
   }
-}
-
-function contrastingTextColor(backgroundColor: string) {
-  const channels = [1, 3, 5].map((offset) => {
-    const channel = Number.parseInt(backgroundColor.slice(offset, offset + 2), 16) / 255
-    return channel <= 0.04045
-      ? channel / 12.92
-      : ((channel + 0.055) / 1.055) ** 2.4
-  })
-  const luminance = 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
-  const blackContrast = (luminance + 0.05) / 0.05
-  const whiteContrast = 1.05 / (luminance + 0.05)
-  return blackContrast >= whiteContrast ? '#000000' : '#FFFFFF'
 }
 
 function numericValue(value: unknown) {

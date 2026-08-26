@@ -91,7 +91,7 @@ function renderChart(chart: ECharts, model: ChartModel) {
       reject(new Error('图表渲染超时，请重试。'))
     }, 3000)
     try {
-      chart.setOption(createChartOption(model, { forExport: true }), {
+      chart.setOption(createChartOption(model, { forExport: true, chartWidth: EXPORT_WIDTH }), {
         notMerge: true,
         lazyUpdate: false,
       })

@@ -6,6 +6,7 @@ import {
   colorsForScheme,
   xAxisFieldUnavailableReason,
   createDefaultChartSettings,
+  createDefaultYAxisFieldSelection,
   defaultYAxisFieldIds,
   deleteSourceTableRows,
   downloadChart,
@@ -42,6 +43,7 @@ type WorksheetMapping = {
   xAxisFieldId: FieldId | null
   yAxisFields: YAxisFieldSelection[]
   fieldColors: Map<FieldId, string>
+  fieldDetailLabelColors: Map<FieldId, string>
   fieldGradients: Map<FieldId, boolean>
   chartSettings: ChartSettings
 }
@@ -65,6 +67,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   let worksheetMappings = new Map<string, WorksheetMapping>()
   let lastValidCharts = new Map<string, ChartModel>()
   let fieldColors = new Map<FieldId, string>()
+  let fieldDetailLabelColors = new Map<FieldId, string>()
   let fieldGradients = new Map<FieldId, boolean>()
 
   const worksheets = computed(() => dataSource.value?.worksheets ?? [])
@@ -181,6 +184,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       yAxisFields.value = []
       chartSettings.value = createDefaultChartSettings()
       fieldColors = new Map()
+      fieldDetailLabelColors = new Map()
       fieldGradients = new Map()
       return
     }
@@ -189,6 +193,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId.value = savedMapping.xAxisFieldId
       yAxisFields.value = savedMapping.yAxisFields.map((field) => ({ ...field }))
       fieldColors = new Map(savedMapping.fieldColors)
+      fieldDetailLabelColors = new Map(savedMapping.fieldDetailLabelColors)
       fieldGradients = new Map(savedMapping.fieldGradients)
       chartSettings.value = { ...savedMapping.chartSettings }
     }
@@ -196,14 +201,19 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       const mapping = inferUniqueMapping(worksheet)
       chartSettings.value = { ...createDefaultChartSettings(), title: worksheet.name }
       fieldColors = new Map()
+      fieldDetailLabelColors = new Map()
       fieldGradients = new Map()
       xAxisFieldId.value = mapping.xAxisFieldId
-      yAxisFields.value = mapping.yAxisFieldIds.map((fieldId, index) => ({
-        fieldId,
-        color: colorsForScheme(chartSettings.value.baseColorSchemeId)[index]!,
-        seriesGradient: false,
-      }))
-      for (const field of yAxisFields.value) fieldColors.set(field.fieldId, field.color)
+      yAxisFields.value = mapping.yAxisFieldIds.map((fieldId, index) =>
+        createDefaultYAxisFieldSelection(
+          fieldId,
+          colorsForScheme(chartSettings.value.baseColorSchemeId)[index]!,
+        ),
+      )
+      for (const field of yAxisFields.value) {
+        fieldColors.set(field.fieldId, field.color)
+        fieldDetailLabelColors.set(field.fieldId, field.detailLabelColor)
+      }
       saveWorksheetMapping()
     }
     viewMode.value = 'chart'
@@ -249,8 +259,14 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     for (const fieldId of defaultYAxisFieldIds(worksheet, id)) {
       const color = fieldColors.get(fieldId)
         ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
-      next.push({ fieldId, color, seriesGradient: fieldGradients.get(fieldId) ?? false })
+      const selection = createDefaultYAxisFieldSelection(fieldId, color)
+      next.push({
+        ...selection,
+        detailLabelColor: fieldDetailLabelColors.get(fieldId) ?? selection.detailLabelColor,
+        seriesGradient: fieldGradients.get(fieldId) ?? false,
+      })
       fieldColors.set(fieldId, color)
+      fieldDetailLabelColors.set(fieldId, next.at(-1)!.detailLabelColor)
     }
     yAxisFields.value = next
     finishChartChange()
@@ -274,8 +290,14 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       if (retainedIds.has(fieldId)) continue
       const color = fieldColors.get(fieldId)
         ?? firstAvailableSeriesColor(chartSettings.value.baseColorSchemeId, next)
-      next.push({ fieldId, color, seriesGradient: fieldGradients.get(fieldId) ?? false })
+      const selection = createDefaultYAxisFieldSelection(fieldId, color)
+      next.push({
+        ...selection,
+        detailLabelColor: fieldDetailLabelColors.get(fieldId) ?? selection.detailLabelColor,
+        seriesGradient: fieldGradients.get(fieldId) ?? false,
+      })
       fieldColors.set(fieldId, color)
+      fieldDetailLabelColors.set(fieldId, next.at(-1)!.detailLabelColor)
     }
 
     yAxisFields.value = next
@@ -352,10 +374,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
-  function updateDetailLabelColor(value: string) {
+  function updateDetailLabelColor(fieldId: FieldId, value: string) {
     const color = normalizeHexColor(value)
-    if (!color) return
-    chartSettings.value = { ...chartSettings.value, detailLabelColor: color }
+    if (!color || !yAxisFields.value.some(field => field.fieldId === fieldId)) return
+    yAxisFields.value = yAxisFields.value.map(field =>
+      field.fieldId === fieldId ? { ...field, detailLabelColor: color } : field,
+    )
+    fieldDetailLabelColors.set(fieldId, color)
     finishChartChange()
   }
 
@@ -452,6 +477,16 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateLegendLayout(legendLayout: ChartSettings['legendLayout']) {
+    chartSettings.value = { ...chartSettings.value, legendLayout }
+    finishChartChange()
+  }
+
+  function updateLegendPosition(legendPosition: ChartSettings['legendPosition']) {
+    chartSettings.value = { ...chartSettings.value, legendPosition }
+    finishChartChange()
+  }
+
   function updateXAxisTickLabelFontSize(value: number) {
     if (!isValidChartFontSize(value)) return
     chartSettings.value = { ...chartSettings.value, xAxisTickLabelFontSize: value }
@@ -508,6 +543,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId: xAxisFieldId.value,
       yAxisFields: yAxisFields.value.map((field) => ({ ...field })),
       fieldColors: new Map(fieldColors),
+      fieldDetailLabelColors: new Map(fieldDetailLabelColors),
       fieldGradients: new Map(fieldGradients),
       chartSettings: { ...chartSettings.value },
     })
@@ -598,6 +634,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateYAxisNameColor,
     updateYAxisUnit,
     updateChartLabelFontSize,
+    updateLegendLayout,
+    updateLegendPosition,
     updateXAxisTickLabelFontSize,
     updateYAxisTickLabelFontSize,
     updateXAxisTickLabelColor,

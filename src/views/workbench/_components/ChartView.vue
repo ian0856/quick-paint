@@ -15,18 +15,21 @@ let chartInstance: ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
 const chartTypeLabel = computed(() => props.chart.settings.chartType === 'bar' ? '柱状图' : '折线图')
 
-function updateChart() {
-  chartInstance?.setOption(createChartOption(props.chart), { notMerge: true, lazyUpdate: false })
+function updateChart(chartWidth = chartHost.value?.clientWidth) {
+  chartInstance?.setOption(createChartOption(props.chart, { chartWidth }), { notMerge: true, lazyUpdate: false })
 }
 
 onMounted(() => {
   if (!chartHost.value) return
   chartInstance = init(chartHost.value, undefined, { renderer: 'canvas' })
   updateChart()
-  resizeObserver = new ResizeObserver(() => chartInstance?.resize({ animation: { duration: 0 } }))
+  resizeObserver = new ResizeObserver(([entry]) => {
+    chartInstance?.resize({ animation: { duration: 0 } })
+    updateChart(entry?.contentRect.width)
+  })
   resizeObserver.observe(chartHost.value)
 })
-watch(() => props.chart, updateChart)
+watch(() => props.chart, () => updateChart())
 watch(() => props.resetRevision, () => zoomPanCanvas.value?.reset())
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
