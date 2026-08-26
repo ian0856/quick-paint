@@ -5,6 +5,9 @@ import { computed, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue
 import ZoomPanCanvas from '../../../components/ZoomPanCanvas.vue'
 import { createChartOption, type ChartModel } from '../utils'
 
+const CHART_WIDTH = 1600
+const CHART_HEIGHT = 900
+
 const props = defineProps<{
   chart: ChartModel
   resetRevision: number
@@ -12,27 +15,25 @@ const props = defineProps<{
 const zoomPanCanvas = useTemplateRef<InstanceType<typeof ZoomPanCanvas>>('zoomPanCanvas')
 const chartHost = useTemplateRef<HTMLDivElement>('chartHost')
 let chartInstance: ECharts | null = null
-let resizeObserver: ResizeObserver | null = null
 const chartTypeLabel = computed(() => props.chart.settings.chartType === 'bar' ? '柱状图' : '折线图')
 
-function updateChart(chartWidth = chartHost.value?.clientWidth) {
-  chartInstance?.setOption(createChartOption(props.chart, { chartWidth }), { notMerge: true, lazyUpdate: false })
+function updateChart() {
+  chartInstance?.setOption(createChartOption(props.chart, { chartWidth: CHART_WIDTH }), { notMerge: true, lazyUpdate: false })
 }
 
 onMounted(() => {
   if (!chartHost.value) return
-  chartInstance = init(chartHost.value, undefined, { renderer: 'canvas' })
-  updateChart()
-  resizeObserver = new ResizeObserver(([entry]) => {
-    chartInstance?.resize({ animation: { duration: 0 } })
-    updateChart(entry?.contentRect.width)
+  chartInstance = init(chartHost.value, undefined, {
+    renderer: 'canvas',
+    width: CHART_WIDTH,
+    height: CHART_HEIGHT,
   })
-  resizeObserver.observe(chartHost.value)
+  updateChart()
+  void document.fonts?.ready.then(() => updateChart())
 })
-watch(() => props.chart, () => updateChart())
+watch(() => props.chart, updateChart)
 watch(() => props.resetRevision, () => zoomPanCanvas.value?.reset())
 onBeforeUnmount(() => {
-  resizeObserver?.disconnect()
   const instance = chartInstance
   chartInstance = null
   instance?.dispose()
@@ -43,10 +44,10 @@ onBeforeUnmount(() => {
   <section class="h-full min-h-0 min-w-0 w-full grid grid-rows-[32px_minmax(0,1fr)] px-7.5 pb-7.5 pt-6" :aria-label="`${chartTypeLabel}预览`">
     <div class="text-right text-caption">共 {{ chart.labels.length }} 条数据</div>
     <ZoomPanCanvas ref="zoomPanCanvas" aria-label="图表缩放画布">
-      <div class="chart-panel relative h-full min-h-0 min-w-0 border border-base rounded-1.5 bg-base px-7 pb-4.5 pt-6 shadow-[0_8px_22px_rgb(30_42_64/5%)]">
+      <div class="chart-panel relative h-max w-max border border-base rounded-1.5 bg-base p-[10px] shadow-[0_8px_22px_rgb(30_42_64/5%)]">
         <div
           ref="chartHost"
-          class="h-full min-h-0 min-w-0 w-full"
+          class="h-[900px] w-[1600px] flex-none"
           role="img"
           :aria-label="`${chartTypeLabel}：${chart.title}，共 ${chart.labels.length} 条数据，${chart.series.length} 个数值系列`"
         />

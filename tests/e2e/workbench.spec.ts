@@ -68,16 +68,15 @@ test('imports CSV, switches to the read-only table, and exports a real PNG', asy
     const matrix = new DOMMatrix(getComputedStyle(element).transform)
     return { x: matrix.e, y: matrix.f }
   })
-  const panelBox = await page.locator('.chart-panel').boundingBox()
-  await page.mouse.move(panelBox!.x + panelBox!.width / 2, panelBox!.y + panelBox!.height / 2)
+  await page.mouse.move(viewportBox!.x + viewportBox!.width / 2, viewportBox!.y + viewportBox!.height / 2)
   await page.mouse.down()
-  await page.mouse.move(panelBox!.x + panelBox!.width / 2 + 80, panelBox!.y + panelBox!.height / 2 + 40)
+  await page.mouse.move(viewportBox!.x + viewportBox!.width / 2 + 80, viewportBox!.y + viewportBox!.height / 2 + 40)
   await page.mouse.up()
   await expect.poll(() => zoomContent.evaluate((element) => {
     const matrix = new DOMMatrix(getComputedStyle(element).transform)
     return { x: matrix.e, y: matrix.f }
   })).not.toEqual(transformBeforeDrag)
-  await page.mouse.move(panelBox!.x + panelBox!.width / 2, panelBox!.y + panelBox!.height / 2)
+  await page.mouse.move(viewportBox!.x + viewportBox!.width / 2, viewportBox!.y + viewportBox!.height / 2)
   await expect(page.locator('.chart-panel div[style*="z-index: 9999999"]')).toBeVisible()
 
   await page.getByRole('textbox', { name: '图表标题' }).fill('更新后的标题')
@@ -145,12 +144,12 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
   await selectSettingsGroup(settings, '图形')
   const barSurface = page.getByRole('img', { name: '柱状图：Sheet1，共 3 条数据，2 个数值系列' })
   await expect(barSurface).toBeVisible()
-  await hoverAtChartCenter(page, barSurface)
+  await hoverAtChartPosition(page, barSurface, 0.1, 0.5)
   let tooltip = page.locator('.chart-panel div[style*="z-index: 9999999"]')
   await expect(tooltip).toBeVisible()
-  await expect(tooltip).toContainText('二月')
-  await expect(tooltip).toContainText('销售额25万元')
-  await expect(tooltip).toContainText('利润3万元')
+  await expect(tooltip).toContainText('一月')
+  await expect(tooltip).toContainText('销售额20万元')
+  await expect(tooltip).toContainText('利润2万元')
 
   const canvas = page.locator('.chart-panel canvas')
   const detailSwitch = settings.getByRole('switch', { name: '显示数据详情' })
@@ -174,18 +173,19 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
   await settings.locator('.el-switch:has(input[aria-label="显示线下半透明面积"])').click()
   const lineSurface = page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })
   await expect(lineSurface).toBeVisible()
-  await hoverAtChartPosition(page, lineSurface, 0.5, 0.22)
+  await hoverAtChartPosition(page, lineSurface, 0.1, 0.5)
   tooltip = page.locator('.chart-panel div[style*="z-index: 9999999"]')
   await expect(tooltip).toBeVisible()
   const tooltipText = (await tooltip.innerText()).replace(/\s/g, '')
-  expect(tooltipText).toContain('二月')
-  expect(tooltipText.indexOf('销售额25万元')).toBeLessThan(tooltipText.indexOf('利润3万元'))
+  expect(tooltipText).toContain('一月')
+  expect(tooltipText.indexOf('销售额20万元')).toBeLessThan(tooltipText.indexOf('利润2万元'))
 
   await expect(canvas).toHaveCount(1)
-  const surfaceSize = await lineSurface.evaluate(element => ({
+  const fixedSurfaceSize = { width: 1600, height: 900 }
+  await expect(lineSurface.evaluate(element => ({
     width: element.clientWidth,
     height: element.clientHeight,
-  }))
+  }))).resolves.toEqual(fixedSurfaceSize)
   const fingerprintWithoutDetails = await canvasFingerprint(canvas)
   await expect(detailSwitch).not.toBeChecked()
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
@@ -194,7 +194,7 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
   await expect(lineSurface.evaluate(element => ({
     width: element.clientWidth,
     height: element.clientHeight,
-  }))).resolves.toEqual(surfaceSize)
+  }))).resolves.toEqual(fixedSurfaceSize)
 
   await setChartColor(page, settings, '详情颜色：销售额', '#8B1E3F')
   const fingerprintWithConfiguredColor = await canvasFingerprint(canvas)
@@ -210,16 +210,36 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
   await expect(lineSurface.evaluate(element => ({
     width: element.clientWidth,
     height: element.clientHeight,
-  }))).resolves.toEqual(surfaceSize)
+  }))).resolves.toEqual(fixedSurfaceSize)
+
+  await expect(page.locator('.chart-panel').evaluate((element) => {
+    const style = getComputedStyle(element)
+    return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft]
+  })).resolves.toEqual(['10px', '10px', '10px', '10px'])
+  await page.getByRole('button', { name: '折叠高级设置' }).click()
+  await expect(page.getByRole('button', { name: '展开高级设置' })).toBeVisible()
+  await expect(lineSurface.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))).resolves.toEqual(fixedSurfaceSize)
+  await expect(canvas.evaluate(element => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }))).resolves.toEqual(fixedSurfaceSize)
+  await page.getByRole('button', { name: '展开高级设置' }).click()
+  await expect(page.getByRole('button', { name: '折叠高级设置' })).toBeVisible()
 
   for (const viewport of [{ width: 1024, height: 768 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport)
     await expect(lineSurface).toBeVisible()
-    const resizedSurfaceSize = await lineSurface.evaluate(element => [element.clientWidth, element.clientHeight])
-    expect(resizedSurfaceSize[0]).toBeGreaterThan(0)
-    expect(resizedSurfaceSize[1]).toBeGreaterThan(0)
-    await expect.poll(() => canvas.evaluate(element => [element.clientWidth, element.clientHeight]))
-      .toEqual(resizedSurfaceSize)
+    await expect(lineSurface.evaluate(element => ({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    }))).resolves.toEqual(fixedSurfaceSize)
+    await expect(canvas.evaluate(element => ({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    }))).resolves.toEqual(fixedSurfaceSize)
     expect(await canvasFingerprint(canvas)).not.toBe(0)
   }
 
@@ -232,17 +252,18 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
   await setChartColor(page, settings, '详情颜色：销售额', '#8B1E3F')
   const denseCanvas = page.locator('.chart-panel canvas')
-  const denseDetailStats = await canvasColorStats(denseCanvas, [139, 30, 63], { x: [0.08, 0.97], y: [0.12, 0.88] })
-  const denseLineStats = await canvasColorStats(denseCanvas, [37, 99, 235], { x: [0.08, 0.97], y: [0.12, 0.88] })
+  await expect.poll(async () => (await canvasColorStats(
+    denseCanvas,
+    [139, 30, 63],
+    { x: [0.08, 0.97], y: [0.05, 0.88] },
+  )).count).toBeGreaterThan(5)
+  const denseDetailStats = await canvasColorStats(denseCanvas, [139, 30, 63], { x: [0.08, 0.97], y: [0.05, 0.88] })
+  const denseLineStats = await canvasColorStats(denseCanvas, [37, 99, 235], { x: [0.08, 0.97], y: [0.1, 0.88] })
   expect(denseDetailStats.count).toBeGreaterThan(5)
   expect(denseDetailStats.maxY).toBeLessThan(denseLineStats.minY)
   expect(denseDetailStats.columnCount).toBeLessThan(denseDetailStats.canvasWidth * 0.5)
   expect(browserErrors).toEqual([])
 })
-
-async function hoverAtChartCenter(page: Page, chartSurface: ReturnType<Page['getByRole']>) {
-  await hoverAtChartPosition(page, chartSurface, 0.5, 0.5)
-}
 
 async function hoverAtChartPosition(
   page: Page,
@@ -298,6 +319,35 @@ async function canvasColorStats(
     }
     return { count, columnCount: columns.size, minX, maxX, minY, maxY, canvasWidth: width, canvasHeight: height }
   }, { color, region })
+}
+
+async function canvasColorXRuns(
+  canvas: ReturnType<Page['locator']>,
+  color: number[],
+  y: [number, number],
+) {
+  return canvas.evaluate((element, { color, y }) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')!
+    const { width, height } = context.canvas
+    const pixels = context.getImageData(0, 0, width, height).data
+    const columns: number[] = []
+    for (let x = 0; x < width; x += 1) {
+      for (let row = Math.floor(height * y[0]); row < Math.ceil(height * y[1]); row += 1) {
+        const index = (row * width + x) * 4
+        if (pixels[index] === color[0] && pixels[index + 1] === color[1] && pixels[index + 2] === color[2]) {
+          columns.push(x)
+          break
+        }
+      }
+    }
+    const runs: Array<[number, number]> = []
+    for (const x of columns) {
+      const current = runs.at(-1)
+      if (!current || x > current[1] + 1) runs.push([x, x])
+      else current[1] = x
+    }
+    return { width, runs }
+  }, { color, y })
 }
 
 async function blueGradientStats(canvas: ReturnType<Page['locator']>) {
@@ -682,9 +732,11 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   const titleFontSize = settings.getByRole('spinbutton', { name: '图表标题字体大小' })
   await titleFontSize.press('ArrowUp')
   await expect(titleFontSize).toHaveValue('19')
-  const chartLabelFontSize = settings.getByRole('spinbutton', { name: '图例字体大小' })
-  await chartLabelFontSize.press('ArrowUp')
-  await expect(chartLabelFontSize).toHaveValue('12')
+  const legendFontSize = settings.getByRole('spinbutton', { name: '图例字体大小' })
+  await legendFontSize.press('ArrowUp')
+  await expect(legendFontSize).toHaveValue('12')
+  await settings.getByText('纵向', { exact: true }).click()
+  await settings.getByText('靠右', { exact: true }).click()
   await selectSettingsGroup(settings, 'x轴')
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
   await settings.getByRole('textbox', { name: 'x轴名称' }).fill('地区')
@@ -736,6 +788,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).toBeChecked()
   await selectSettingsGroup(settings, '图形')
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
+  await expect(settings.getByRole('radio', { name: '横向' })).toBeChecked()
+  await expect(settings.getByRole('radio', { name: '居中' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '圆角柱' })).not.toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示柱背景' })).not.toBeChecked()
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
@@ -758,6 +812,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).not.toBeChecked()
   await selectSettingsGroup(settings, '图形')
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
+  await expect(settings.getByRole('radio', { name: '纵向' })).toBeChecked()
+  await expect(settings.getByRole('radio', { name: '靠右' })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '平滑' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示节点' })).not.toBeChecked()
@@ -777,6 +833,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
   await expect(settings.getByRole('button', { name: /恢复默认/ })).toHaveCount(0)
+  await settings.getByText('横向', { exact: true }).click()
+  await settings.getByText('居中', { exact: true }).click()
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
   await expect(settings.getByRole('switch', { name: '显示数据详情' })).toBeChecked()
   await setChartColor(page, settings, '详情颜色：销售额', '#8B1E3F')
@@ -839,12 +897,10 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   const sparseLineSurface = page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })
   await expect(sparseLineSurface).toBeVisible()
   const sparseCanvas = page.locator('.chart-panel canvas')
-  const firstPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.25, 0.4], y: [0.12, 0.88] })
-  const missingPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.48, 0.62], y: [0.12, 0.88] })
-  const lastPoint = await canvasColorStats(sparseCanvas, [37, 99, 235], { x: [0.74, 0.88], y: [0.12, 0.88] })
-  expect(firstPoint.count).toBeGreaterThan(5)
-  expect(missingPoint.count).toBe(0)
-  expect(lastPoint.count).toBeGreaterThan(5)
+  const pointRuns = await canvasColorXRuns(sparseCanvas, [37, 99, 235], [0.1, 0.95])
+  expect(pointRuns.runs).toHaveLength(2)
+  expect(pointRuns.runs[0]![1]).toBeLessThan(pointRuns.width * 0.4)
+  expect(pointRuns.runs[1]![0]).toBeGreaterThan(pointRuns.width * 0.6)
   const sparseLineData = page.getByRole('table', { name: '折线图数据' })
   await expect(sparseLineData).toBeAttached()
   await expect(sparseLineData.getByRole('row').nth(2)).toContainText('（空白）')
@@ -884,7 +940,7 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   const singlePointPixels = await canvasColorStats(
     page.locator('.chart-panel canvas'),
     [37, 99, 235],
-    { x: [0.15, 0.9], y: [0.15, 0.85] },
+    { x: [0.03, 0.99], y: [0.1, 0.9] },
   )
   expect(singlePointPixels.count).toBeGreaterThan(5)
   const singlePointData = page.getByRole('table', { name: '折线图数据' })
@@ -961,10 +1017,10 @@ test('renders gradients, mixed-sign caps, and size-aware inside labels in previe
   await importFile(page, '混合图表.csv', 'text/csv', Buffer.from([
     '类别,销售额,利润',
     '正值,100,40',
-    '短柱,5,2',
+    '短柱,1,2',
     '零值,0,0',
     '负值,-80,-30',
-    '负短柱,-5,-2',
+    '负短柱,-1,-2',
     '这是一个很长的分类标签,60,',
   ].join('\n')))
 
@@ -1014,7 +1070,7 @@ test('renders gradients, mixed-sign caps, and size-aware inside labels in previe
   expect(png.readUInt32BE(20)).toBe(900)
   const exportedBars = await analyzeBlueBarsInPng(page, png)
   expect(exportedBars[0]!.whiteInteriorPixels).toBeGreaterThan(0)
-  expect(exportedBars[1]!.whiteInteriorPixels).toBeGreaterThan(0)
+  expect(exportedBars[1]!.whiteInteriorPixels).toBe(0)
 })
 
 test('configures Field Detail Label colors and long Legend layouts in preview and PNG', async ({ page }) => {
@@ -1031,18 +1087,24 @@ test('configures Field Detail Label colors and long Legend layouts in preview an
   await expect(settings.getByRole('spinbutton', { name: '图例字体大小' })).toHaveValue('11')
   await expect(settings.getByRole('radio', { name: '横向' })).toBeChecked()
   await expect(settings.getByRole('radio', { name: '居中' })).toBeChecked()
+  await setChartColor(page, settings, '图表标题字体颜色', '#123456')
 
   const canvas = page.locator('.chart-panel canvas')
   const defaultFingerprint = await canvasFingerprint(canvas)
-  await settings.getByText('纵向', { exact: true }).click()
-  await settings.getByText('靠右', { exact: true }).click()
-  await expect(settings.getByRole('radio', { name: '纵向' })).toBeChecked()
-  await expect(settings.getByRole('radio', { name: '靠右' })).toBeChecked()
+  for (const layout of ['横向', '纵向'] as const) {
+    await settings.getByText(layout, { exact: true }).click()
+    for (const position of ['靠左', '居中', '靠右'] as const) {
+      await settings.getByText(position, { exact: true }).click()
+      await expect(settings.getByRole('radio', { name: layout })).toBeChecked()
+      await expect(settings.getByRole('radio', { name: position })).toBeChecked()
+      expect(await canvasFingerprint(canvas)).not.toBe(0)
+    }
+  }
   await expect.poll(() => canvasFingerprint(canvas)).not.toBe(defaultFingerprint)
 
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"])').click()
-  const fieldColors = settings.getByRole('button', { name: /详情颜色：/ })
-  await expect(fieldColors).toHaveCount(5)
+  const detailLabelColorButtons = settings.getByRole('button', { name: /详情颜色：/ })
+  await expect(detailLabelColorButtons).toHaveCount(5)
   await expect(settings.locator('section[aria-labelledby="chart-detail-settings-title"]')
     .getByText('超长中文字段名称用于验证完整显示', { exact: true })).toBeVisible()
   await setChartColor(page, settings, '详情颜色：销售额（含税）', '#8B1E3F')
@@ -1053,7 +1115,15 @@ test('configures Field Detail Label colors and long Legend layouts in preview an
   await expect(settings.getByRole('button', { name: '详情颜色：销售额（含税）' }))
     .toHaveAttribute('aria-description', /#8B1E3F/i)
   const previewDetailStats = await canvasColorStats(canvas, [139, 30, 63], { x: [0, 1], y: [0, 1] })
+  const previewTitleStats = await canvasColorStats(canvas, [18, 52, 86], { x: [0, 1], y: [0, 0.1] })
+  const previewLegendStats = await canvasColorStats(canvas, [37, 99, 235], { x: [0.7, 1], y: [0.05, 0.35] })
+  const previewPlotStats = await canvasColorStats(canvas, [37, 99, 235], { x: [0.05, 0.7], y: [0.1, 0.9] })
   expect(previewDetailStats.count).toBeGreaterThan(0)
+  expect(previewTitleStats.count).toBeGreaterThan(0)
+  expect(previewLegendStats.count).toBeGreaterThan(0)
+  expect(previewPlotStats.count).toBeGreaterThan(0)
+  expect(previewTitleStats.maxY).toBeLessThan(previewLegendStats.minY)
+  expect(previewLegendStats.maxY).toBeLessThan(previewPlotStats.minY)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '导出 PNG' }).click()
@@ -1065,10 +1135,13 @@ test('configures Field Detail Label colors and long Legend layouts in preview an
   expect(png.readUInt32BE(16)).toBe(1600)
   expect(png.readUInt32BE(20)).toBe(900)
   const pixels = await inspectPngPixels(page, png, [], [
+    { color: [18, 52, 86], x: [0.2, 0.8], y: [0, 0.1] },
+    { color: [37, 99, 235], x: [0.7, 1], y: [0.05, 0.35] },
+    { color: [37, 99, 235], x: [0.05, 0.7], y: [0.25, 0.9] },
     { color: [139, 30, 63], x: [0, 1], y: [0, 1] },
   ])
   expect(pixels.nonWhiteSamples).toBeGreaterThan(100)
-  expect(pixels.targetRegionPixels[0]).toBeGreaterThan(0)
+  expect(pixels.targetRegionPixels.every(count => count > 0)).toBe(true)
 })
 
 test('opens responsive Chart Settings as a focus-restoring drawer', async ({ page }) => {

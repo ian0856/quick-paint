@@ -32,6 +32,14 @@ export type ChartOption = ComposeOption<
   | TooltipComponentOption
 >
 
+type TextMeasurer = (value: string, fontSize: number) => number
+
+type ChartOptionBuildOptions = {
+  forExport?: boolean
+  chartWidth?: number
+  measureText?: TextMeasurer
+}
+
 use([
   BarChart,
   LineChart,
@@ -45,10 +53,15 @@ use([
 
 export function createChartOption(
   model: ChartModel,
-  options: { forExport?: boolean, chartWidth?: number } = {},
+  options: ChartOptionBuildOptions = {},
 ): ChartOption {
   const forExport = options.forExport === true
-  const legend = calculateLegendBox(model, options.chartWidth ?? (forExport ? 1600 : 960), forExport)
+  const legend = calculateLegendBox(
+    model,
+    options.chartWidth ?? (forExport ? 1600 : 960),
+    forExport,
+    options.measureText ?? canvasTextMeasurer(),
+  )
   const unit = model.settings.yAxisUnit.trim()
   const valueFormatter = (value: unknown) => formatValue(value, unit)
 
@@ -82,13 +95,15 @@ export function createChartOption(
       height: legend.height,
       orient: model.settings.legendLayout,
       left: model.settings.legendPosition,
+      formatter: (name: string) => legend.formattedNames.get(name) ?? name,
       itemWidth: forExport ? 20 : 14,
       itemHeight: forExport ? 12 : 9,
       itemGap: forExport ? 22 : 16,
       textStyle: {
         color: '#344054',
         fontFamily: CHART_FONT,
-        fontSize: model.settings.chartLabelFontSize,
+        fontSize: model.settings.legendFontSize,
+        lineHeight: legend.lineHeight,
       },
     },
     tooltip: {
@@ -154,55 +169,105 @@ export function createChartOption(
   }
 }
 
-function calculateLegendBox(model: ChartModel, chartWidth: number, forExport: boolean) {
+function calculateLegendBox(
+  model: ChartModel,
+  chartWidth: number,
+  forExport: boolean,
+  measureText: TextMeasurer,
+) {
   const top = forExport ? 82 : 62
   const itemWidth = forExport ? 20 : 14
   const itemHeight = forExport ? 12 : 9
   const itemGap = forExport ? 22 : 16
   const markerTextGap = forExport ? 7 : 5
-  const fontSize = model.settings.chartLabelFontSize
+  const fontSize = model.settings.legendFontSize
   const lineHeight = Math.ceil(Math.max(itemHeight, fontSize * 1.5))
   const sideInset = forExport ? 72 : 36
   const availableWidth = Math.max(1, chartWidth - sideInset * 2)
-  const itemWidths = model.series.map(series =>
-    Math.ceil(itemWidth + markerTextGap + estimatedTextWidth(series.fieldName, fontSize)),
-  )
+  const availableTextWidth = Math.max(1, availableWidth - itemWidth - markerTextGap)
+  const formattedNames = new Map<string, string>()
+  const items = model.series.map((series) => {
+    const lines = wrapLegendName(series.fieldName, availableTextWidth, fontSize, measureText)
+    formattedNames.set(series.fieldName, lines.join('\n'))
+    return {
+      width: Math.ceil(itemWidth + markerTextGap + Math.max(...lines.map(line => measureText(line, fontSize)))),
+      height: Math.max(itemHeight, lines.length * lineHeight),
+    }
+  })
 
   if (model.settings.legendLayout === 'vertical') {
     return {
       top,
-      width: Math.min(availableWidth, Math.max(1, ...itemWidths)),
-      height: itemWidths.length * lineHeight + Math.max(0, itemWidths.length - 1) * itemGap,
+      width: Math.min(availableWidth, Math.max(1, ...items.map(item => item.width))),
+      height: items.reduce((height, item) => height + item.height, 0)
+        + Math.max(0, items.length - 1) * itemGap,
+      lineHeight,
+      formattedNames,
     }
   }
 
   let rowWidth = 0
-  let rowCount = itemWidths.length > 0 ? 1 : 0
+  let rowHeight = 0
+  let totalHeight = 0
   let widestRow = 0
-  for (const itemWidthValue of itemWidths) {
-    const nextWidth = rowWidth === 0 ? itemWidthValue : rowWidth + itemGap + itemWidthValue
+  for (const item of items) {
+    const nextWidth = rowWidth === 0 ? item.width : rowWidth + itemGap + item.width
     if (rowWidth > 0 && nextWidth > availableWidth) {
       widestRow = Math.max(widestRow, rowWidth)
-      rowCount += 1
-      rowWidth = itemWidthValue
+      totalHeight += rowHeight + itemGap
+      rowWidth = item.width
+      rowHeight = item.height
     }
     else {
       rowWidth = nextWidth
+      rowHeight = Math.max(rowHeight, item.height)
     }
   }
   widestRow = Math.max(widestRow, rowWidth)
+  totalHeight += rowHeight
   return {
     top,
     width: Math.min(availableWidth, Math.max(1, widestRow)),
-    height: rowCount * lineHeight + Math.max(0, rowCount - 1) * itemGap,
+    height: totalHeight,
+    lineHeight,
+    formattedNames,
+  }
+}
+
+function wrapLegendName(
+  value: string,
+  maxWidth: number,
+  fontSize: number,
+  measureText: TextMeasurer,
+) {
+  const lines: string[] = []
+  let line = ''
+  for (const character of value) {
+    if (line && measureText(`${line}${character}`, fontSize) > maxWidth) {
+      lines.push(line)
+      line = character
+    }
+    else {
+      line += character
+    }
+  }
+  if (line || lines.length === 0) lines.push(line)
+  return lines
+}
+
+function canvasTextMeasurer(): TextMeasurer {
+  if (typeof document === 'undefined') return estimatedTextWidth
+  const context = document.createElement('canvas').getContext('2d')
+  if (!context) return estimatedTextWidth
+  return (value, fontSize) => {
+    context.font = `400 ${fontSize}px "${CHART_FONT}"`
+    return context.measureText(value).width
   }
 }
 
 function estimatedTextWidth(value: string, fontSize: number) {
-  return Array.from(value).reduce((width, character) => {
-    const isNarrow = /^[\u0000-\u00ff]$/.test(character)
-    return width + fontSize * (isNarrow ? 0.6 : 1)
-  }, 0)
+  return Array.from(value).reduce((width, character) =>
+    width + fontSize * (/^[\u0000-\u00ff]$/.test(character) ? 0.6 : 1), 0)
 }
 
 function createBarSeries(
@@ -299,7 +364,7 @@ function barDetailLabel(model: ChartModel, detailLabelColor: string, unit: strin
           labelRect: { width: number, height: number }
         }) => rect.width >= labelRect.width && rect.height >= labelRect.height
           ? { hideOverlap: true }
-          : { fontSize: 0 }
+          : { fontSize: 0, opacity: 0 }
       : { hideOverlap: true },
   }
 }

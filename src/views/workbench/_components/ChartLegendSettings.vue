@@ -32,11 +32,11 @@ function updateFontSize(value: number | undefined) {
 </script>
 
 <template>
-  <section aria-labelledby="chart-label-settings-title">
-    <h3 id="chart-label-settings-title" class="m-0 text-xs font-600 text-text-strong">图例</h3>
-    <label class="control-label block" for="chart-label-font-size">字体大小</label>
+  <section aria-labelledby="chart-legend-settings-title">
+    <h3 id="chart-legend-settings-title" class="m-0 text-xs font-600 text-text-strong">图例</h3>
+    <label class="control-label block" for="legend-font-size">字体大小</label>
     <ElInputNumber
-      id="chart-label-font-size"
+      id="legend-font-size"
       class="mt-1 w-full"
       :model-value="fontSize"
       :disabled="disabled"

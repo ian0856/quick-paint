@@ -65,7 +65,7 @@ defineExpose({ reset })
     role="region"
     :aria-label="ariaLabel"
   >
-    <div ref="content" class="zoom-pan-content h-full min-h-0 min-w-0 w-full" data-zoom-pan-content>
+    <div ref="content" class="zoom-pan-content h-max w-max" data-zoom-pan-content>
       <slot />
     </div>
   </div>

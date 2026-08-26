@@ -37,7 +37,7 @@ export const DEFAULT_CHART_TITLE_FONT_SIZE = 18
 export const DEFAULT_CHART_TITLE_COLOR = '#172033'
 export const DEFAULT_AXIS_NAME_FONT_SIZE = 12
 export const DEFAULT_AXIS_NAME_COLOR = '#344054'
-export const DEFAULT_CHART_LABEL_FONT_SIZE = 11
+export const DEFAULT_LEGEND_FONT_SIZE = 11
 export const DEFAULT_DETAIL_LABEL_FONT_SIZE = 11
 export const DEFAULT_DETAIL_LABEL_COLOR = '#344054'
 export const DEFAULT_AXIS_TICK_LABEL_FONT_SIZE = 11
@@ -69,7 +69,7 @@ export function createDefaultChartSettings(): ChartSettings {
     xAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
     yAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
     yAxisUnit: '',
-    chartLabelFontSize: DEFAULT_CHART_LABEL_FONT_SIZE,
+    legendFontSize: DEFAULT_LEGEND_FONT_SIZE,
     xAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
     yAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
     xAxisTickLabelColor: DEFAULT_AXIS_TICK_LABEL_COLOR,

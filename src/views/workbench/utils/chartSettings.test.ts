@@ -33,7 +33,7 @@ describe('chart settings', () => {
       xAxisNameColor: '#344054',
       yAxisNameColor: '#344054',
       yAxisUnit: '',
-      chartLabelFontSize: 11,
+      legendFontSize: 11,
       xAxisTickLabelFontSize: 11,
       yAxisTickLabelFontSize: 11,
       xAxisTickLabelColor: '#667085',

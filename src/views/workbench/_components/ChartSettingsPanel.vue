@@ -8,7 +8,7 @@ import AxisSettings from './AxisSettings.vue'
 import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
 import ChartDetailLabelSettings from './ChartDetailLabelSettings.vue'
-import ChartLabelSettings from './ChartLabelSettings.vue'
+import ChartLegendSettings from './ChartLegendSettings.vue'
 import LinePointSettings from './LinePointSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
 import ChartTypeSettings from './ChartTypeSettings.vue'
@@ -119,13 +119,13 @@ const diagnostic = computed(() => {
               />
             </div>
             <div class="border-t border-base py-5">
-              <ChartLabelSettings
+              <ChartLegendSettings
                 :key="worksheet?.id"
-                :font-size="chartSettings.chartLabelFontSize"
+                :font-size="chartSettings.legendFontSize"
                 :layout="chartSettings.legendLayout"
                 :position="chartSettings.legendPosition"
                 :disabled="chartSettingsDisabled"
-                @update-font-size="store.updateChartLabelFontSize"
+                @update-font-size="store.updateLegendFontSize"
                 @update-layout="store.updateLegendLayout"
                 @update-position="store.updateLegendPosition"
               />

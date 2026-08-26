@@ -26,7 +26,7 @@ describe('createChartOption Bar Chart behavior', () => {
         xAxisNameColor: '#778899',
         yAxisNameColor: '#AABBCC',
         yAxisUnit: '万元',
-        chartLabelFontSize: 13,
+        legendFontSize: 13,
         showDetailLabels: true,
         detailLabelFontSize: 14,
         xAxisTickLabelFontSize: 14,
@@ -131,6 +131,27 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(verticalLegend.height).toBeGreaterThan(horizontalLegend.height)
     expect(horizontalGrid.top).toBeGreaterThanOrEqual(horizontalLegend.top + horizontalLegend.height + 24)
     expect(verticalGrid.top).toBeGreaterThanOrEqual(verticalLegend.top + verticalLegend.height + 24)
+  })
+
+  test('uses measured text width to wrap one long Legend field name without losing text', () => {
+    const model = barModel()
+    const fieldName = 'WWWWWWWWWWWWWWWWWWWW'
+    model.series[0]!.fieldName = fieldName
+    const option = createChartOption(model, {
+      chartWidth: 200,
+      measureText: value => value.length * 20,
+    })
+    const legend = option.legend as {
+      formatter: (name: string) => string
+      height: number
+      top: number
+    }
+    const formattedName = legend.formatter(fieldName)
+
+    expect(formattedName).toContain('\n')
+    expect(formattedName.replaceAll('\n', '')).toBe(fieldName)
+    expect(legend.height).toBeGreaterThan(20)
+    expect((option.grid as { top: number }).top).toBeGreaterThanOrEqual(legend.top + legend.height + 24)
   })
 
   test('formats Y Axis, tooltip, and detail values with the configured unit', () => {
@@ -252,7 +273,7 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(series.labelLayout({
       rect: { width: 30, height: 12 },
       labelRect: { width: 40, height: 14 },
-    })).toEqual({ fontSize: 0 })
+    })).toEqual({ fontSize: 0, opacity: 0 })
   })
 
   test('uses each Field Detail Label color unchanged inside Bars', () => {

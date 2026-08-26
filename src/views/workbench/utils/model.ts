@@ -97,7 +97,7 @@ export type ChartSettings = {
   xAxisNameColor: string
   yAxisNameColor: string
   yAxisUnit: string
-  chartLabelFontSize: number
+  legendFontSize: number
   xAxisTickLabelFontSize: number
   yAxisTickLabelFontSize: number
   xAxisTickLabelColor: string
