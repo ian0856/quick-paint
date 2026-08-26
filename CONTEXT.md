@@ -64,8 +64,12 @@ _Avoid_: Bar Color Scheme, color list, theme
 The independent Worksheet-specific choice for a Line Chart Value Series to color its Line and Area Fill from a lighter derivative to its base color along Source Table record order. Its Points and legend retain the base color.
 _Avoid_: Gradient Color Scheme, color ramp
 
+**Legend**:
+The ordered field names and color markers that identify the Chart's Value Series. Its items are laid out horizontally or vertically below the chart title, and the whole Legend is positioned at the left, center, or right of the Chart; the plotting area yields enough space to keep every field name visible.
+_Avoid_: Image labels, chart labels
+
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, Legend text size, layout, and position, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:
@@ -89,7 +93,7 @@ The independent Worksheet-specific choice to fill the space between each Value S
 _Avoid_: Area Line Style, stacked area
 
 **Detail Labels**:
-Optional values shown with Bars or Line values using the configured Y Axis unit and font size. Line Chart labels remain visible independently of Point visibility; labels above marks use the configured color, while labels centered inside Bars use a contrasting black or white and are hidden when they do not fit entirely within the Bar. Detail Labels are hidden by default.
+Optional values shown with Bars or Line values. All Detail Labels share visibility, font size, and the configured Y Axis unit, while each selected Y Axis Field has one independently configured color shared by Bar Charts and Line Charts; that color applies outside and inside marks and is restored if the Field is removed and selected again. Line Chart labels remain visible independently of Point visibility; labels centered inside Bars are hidden when they do not fit entirely within the Bar. Detail Labels are hidden by default.
 _Avoid_: Data labels, annotations
 
 **Point**:
