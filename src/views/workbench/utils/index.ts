@@ -36,6 +36,7 @@ export {
   createDefaultYAxisFieldSelection,
   deriveSeriesGradientStartColor,
   firstAvailableSeriesColor,
+  normalizeCanvasColor,
   normalizeHexColor,
   recognizeColorScheme,
 } from './chartSettings'

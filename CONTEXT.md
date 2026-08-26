@@ -73,7 +73,7 @@ The ordered field names and color markers that identify the Chart's Value Series
 _Avoid_: Image labels, chart labels
 
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, Canvas color, chart title and its text style, Series Color Scheme, Legend text size, layout, and position, X Axis and Y Axis names and text styles, Y Axis Unit and its display locations, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, Canvas color and opacity, chart title and its text style, Series Color Scheme, Legend text size, layout, and position, X Axis and Y Axis names and text styles, Y Axis Unit and its display locations, axis tick-label text styles, Y Axis split-line visibility, and Detail Labels. They also include Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:

@@ -213,10 +213,10 @@ describe('createChartOption Bar Chart behavior', () => {
 
   test('uses the configured Canvas color in preview and Chart Image options', () => {
     const model = barModel()
-    model.settings = { ...model.settings, canvasColor: '#F0F4F8' }
+    model.settings = { ...model.settings, canvasColor: '#F0F4F880' }
 
-    expect(createChartOption(model).backgroundColor).toBe('#F0F4F8')
-    expect(createChartOption(model, { forExport: true }).backgroundColor).toBe('#F0F4F8')
+    expect(createChartOption(model).backgroundColor).toBe('#F0F4F880')
+    expect(createChartOption(model, { forExport: true }).backgroundColor).toBe('#F0F4F880')
   })
 
   test('rounds only the free end of positive and negative Bars and links the background shape', () => {

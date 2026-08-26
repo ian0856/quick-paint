@@ -19,6 +19,7 @@ import {
   MAX_CHART_FONT_SIZE,
   MAX_CHART_TITLE_LENGTH,
   MIN_CHART_FONT_SIZE,
+  normalizeCanvasColor,
   normalizeHexColor,
   parseFile,
   firstAvailableSeriesColor,
@@ -381,7 +382,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   }
 
   function updateCanvasColor(value: string) {
-    const color = normalizeHexColor(value)
+    const color = normalizeCanvasColor(value)
     if (!color) return
     chartSettings.value = { ...chartSettings.value, canvasColor: color }
     finishChartChange()

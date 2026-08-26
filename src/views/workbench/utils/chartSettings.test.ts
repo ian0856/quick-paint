@@ -4,6 +4,7 @@ import {
   createDefaultChartSettings,
   createDefaultYAxisFieldSelection,
   deriveSeriesGradientStartColor,
+  normalizeCanvasColor,
   normalizeHexColor,
   recognizeColorScheme,
 } from './chartSettings'
@@ -76,6 +77,13 @@ describe('chart settings', () => {
     expect(normalizeHexColor('#aabbcc')).toBe('#AABBCC')
     expect(normalizeHexColor('#abc')).toBeNull()
     expect(normalizeHexColor('#AABBCC80')).toBeNull()
+  })
+
+  test('accepts six- or eight-digit hex colors for the Canvas', () => {
+    expect(normalizeCanvasColor('#aabbcc')).toBe('#AABBCC')
+    expect(normalizeCanvasColor('#aabbcc80')).toBe('#AABBCC80')
+    expect(normalizeCanvasColor('#abcd')).toBeNull()
+    expect(normalizeCanvasColor('rgba(170, 187, 204, 0.5)')).toBeNull()
   })
 
 })

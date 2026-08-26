@@ -23,7 +23,8 @@ function updateColor(color: string | null) {
       <ElColorPicker
         :model-value="color"
         :disabled="disabled"
-        :show-alpha="false"
+        show-alpha
+        color-format="hex"
         aria-label="画布颜色"
         @change="updateColor"
       />

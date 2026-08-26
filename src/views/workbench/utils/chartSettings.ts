@@ -117,6 +117,10 @@ export function normalizeHexColor(value: string): string | null {
   return /^#[\dA-F]{6}$/i.test(value) ? value.toUpperCase() : null
 }
 
+export function normalizeCanvasColor(value: string): string | null {
+  return /^#[\dA-F]{6}(?:[\dA-F]{2})?$/i.test(value) ? value.toUpperCase() : null
+}
+
 export function deriveSeriesGradientStartColor(baseColor: string): string {
   const color = normalizeHexColor(baseColor)
   if (!color) throw new Error('Series gradient requires an opaque six-digit hex color.')

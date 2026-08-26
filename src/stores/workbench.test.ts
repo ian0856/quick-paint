@@ -53,7 +53,7 @@ describe('workbench Field-scoped Detail Label color and Legend settings', () => 
     store.updateDetailLabelColor(1, '#8B1E3F')
     store.updateLegendLayout('vertical')
     store.updateLegendPosition('right')
-    store.updateCanvasColor('#f0f4f8')
+    store.updateCanvasColor('#f0f4f880')
     store.selectWorksheet('orders')
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#344054')
     expect(store.chartSettings).toMatchObject({
@@ -63,11 +63,11 @@ describe('workbench Field-scoped Detail Label color and Legend settings', () => 
     })
 
     store.updateDetailLabelColor(1, '#123456')
-    store.updateCanvasColor('#fff1f2')
+    store.updateCanvasColor('#fff1f240')
     store.selectWorksheet('sales')
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#8B1E3F')
     expect(store.chartSettings).toMatchObject({
-      canvasColor: '#F0F4F8',
+      canvasColor: '#F0F4F880',
       legendLayout: 'vertical',
       legendPosition: 'right',
     })
