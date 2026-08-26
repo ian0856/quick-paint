@@ -49,15 +49,23 @@ The vertical axis of the Chart, whose scale represents the values from all selec
 _Avoid_: Value axis, numeric axis
 
 **Bar**:
-The visual mark for one Value Series value from one Record. Bars in the same Value Series share one color across all Records.
+The visual mark for one Value Series value from one Record. Bars in the same Value Series share one color across all Records and have square ends by default; when rounded, each Bar has a semicircular end away from the Y Axis zero baseline and a square end at the baseline.
 _Avoid_: Bar-chart item, column
 
+**Bar Background**:
+The optional faint track behind each Bar across the Y Axis plotting range. It has square ends by default and semicircular ends when its Bar is rounded.
+_Avoid_: Bar track, background Bar
+
 **Series Color Scheme**:
-The complete assignment of one base color to each Value Series in a Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet; a Line Chart may independently render any Value Series with a gradient derived from its base color.
+The complete assignment of one base color to each Value Series in a Chart. Quick Paint provides three immutable built-in schemes, while changing an individual Value Series color creates a custom scheme for the current Worksheet.
 _Avoid_: Bar Color Scheme, color list, theme
 
+**Series Gradient**:
+The independent Worksheet-specific choice for a Line Chart Value Series to color its Line and Area Fill from a lighter derivative to its base color along Source Table record order. Its Points and legend retain the base color.
+_Avoid_: Gradient Color Scheme, color ramp
+
 **Chart Settings**:
-The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis tick interval, Y Axis split-line visibility, and Detail Labels. They also include maximum Bar width, Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and per-series gradient choices for a Line Chart. Chart Settings exist only for the current Data Source session.
+The Worksheet-specific choices for Chart Type, chart title and its text style, Series Color Scheme, chart label size, X Axis and Y Axis names and text styles, Y Axis unit, axis tick-label text styles, Y Axis tick interval, Y Axis split-line visibility, and Detail Labels. They also include maximum Bar width, Bar end shape, Bar background visibility, and Detail Label placement for a Bar Chart, plus Line Style, Area Fill, Point visibility and shape, and Series Gradients for a Line Chart. Chart Settings exist only for the current Data Source session.
 _Avoid_: Image settings, global settings
 
 **Chart Type**:
@@ -81,7 +89,7 @@ The independent Worksheet-specific choice to fill the space between each Value S
 _Avoid_: Area Line Style, stacked area
 
 **Detail Labels**:
-Optional values shown with Bars or Points using the configured Y Axis unit and font size. Labels above marks use the configured color, while labels centered inside Bars automatically use a contrasting black or white; Detail Labels are hidden by default.
+Optional values shown with Bars or Line values using the configured Y Axis unit and font size. Line Chart labels remain visible independently of Point visibility; labels above marks use the configured color, while labels centered inside Bars use a contrasting black or white and are hidden when they do not fit entirely within the Bar. Detail Labels are hidden by default.
 _Avoid_: Data labels, annotations
 
 **Point**:
