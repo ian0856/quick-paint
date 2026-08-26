@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   firstAvailableSeriesColor,
   createDefaultChartSettings,
+  deriveSeriesGradientStartColor,
   normalizeHexColor,
   recognizeColorScheme,
   validateFixedYAxisTickInterval,
@@ -13,7 +14,13 @@ describe('chart settings', () => {
     expect(createDefaultChartSettings()).toMatchObject({
       lineStyle: 'straight',
       areaFill: false,
+      showYAxisSplitLines: true,
+      showLinePoints: true,
+      hollowLinePoints: false,
+      roundedBars: false,
+      showBarBackground: false,
       showDetailLabels: false,
+      showDetailLabelsInsideBars: false,
       detailLabelFontSize: 11,
       detailLabelColor: '#344054',
       xAxisName: 'x轴',
@@ -34,21 +41,27 @@ describe('chart settings', () => {
     })
   })
 
+  test('derives the opaque gradient start by mixing the base color 35% toward white', () => {
+    expect(deriveSeriesGradientStartColor('#2563EB')).toBe('#719AF2')
+    expect(deriveSeriesGradientStartColor('#000000')).toBe('#595959')
+    expect(deriveSeriesGradientStartColor('#FFFFFF')).toBe('#FFFFFF')
+  })
+
   test('recognizes built-in schemes and reports manual combinations as custom', () => {
     expect(recognizeColorScheme([
-      { fieldId: 1, color: '#2563eb' },
-      { fieldId: 2, color: '#D97706' },
+      { fieldId: 1, color: '#2563eb', seriesGradient: false },
+      { fieldId: 2, color: '#D97706', seriesGradient: false },
     ])).toBe('classic')
     expect(recognizeColorScheme([
-      { fieldId: 1, color: '#123456' },
-      { fieldId: 2, color: '#D97706' },
+      { fieldId: 1, color: '#123456', seriesGradient: false },
+      { fieldId: 2, color: '#D97706', seriesGradient: false },
     ])).toBe('custom')
   })
 
   test('chooses the first unused color from the base scheme', () => {
     expect(firstAvailableSeriesColor('contrast', [
-      { fieldId: 1, color: '#0072B2' },
-      { fieldId: 2, color: '#009E73' },
+      { fieldId: 1, color: '#0072B2', seriesGradient: false },
+      { fieldId: 2, color: '#009E73', seriesGradient: false },
     ])).toBe('#E69F00')
   })
 

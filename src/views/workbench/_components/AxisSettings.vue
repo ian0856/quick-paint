@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElColorPicker, ElInput, ElInputNumber, ElSegmented } from 'element-plus'
+import { ElColorPicker, ElInput, ElInputNumber, ElSegmented, ElSwitch } from 'element-plus'
 import { computed, shallowRef, watch } from 'vue'
 import {
   MAX_AXIS_NAME_LENGTH,
@@ -18,6 +18,7 @@ const props = defineProps<{
   xAxisNameColor: string
   yAxisNameColor: string
   yAxisUnit: string
+  showYAxisSplitLines: boolean
   xAxisTickLabelFontSize: number
   yAxisTickLabelFontSize: number
   xAxisTickLabelColor: string
@@ -36,6 +37,7 @@ const emit = defineEmits<{
   updateXAxisNameColor: [value: string]
   updateYAxisNameColor: [value: string]
   updateYAxisUnit: [value: string]
+  updateShowYAxisSplitLines: [value: boolean]
   updateXAxisTickLabelFontSize: [value: number]
   updateYAxisTickLabelFontSize: [value: number]
   updateXAxisTickLabelColor: [value: string]
@@ -104,6 +106,16 @@ function updateYAxisTickLabelColor(color: string | null) {
 <template>
   <section aria-labelledby="axis-settings-title">
     <h3 id="axis-settings-title" class="m-0 text-xs font-600 text-text-strong">坐标轴</h3>
+
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <span class="text-xs font-600 text-text-strong">显示 Y 轴分割线</span>
+      <ElSwitch
+        :model-value="showYAxisSplitLines"
+        :disabled="disabled"
+        aria-label="显示 Y 轴分割线"
+        @change="emit('updateShowYAxisSplitLines', $event as boolean)"
+      />
+    </div>
 
     <label class="control-label block" for="x-axis-name">x轴名称</label>
     <ElInput

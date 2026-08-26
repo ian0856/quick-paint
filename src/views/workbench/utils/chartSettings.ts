@@ -51,7 +51,13 @@ export function createDefaultChartSettings(): ChartSettings {
     chartType: 'bar',
     lineStyle: 'straight',
     areaFill: false,
+    showYAxisSplitLines: true,
+    showLinePoints: true,
+    hollowLinePoints: false,
+    roundedBars: false,
+    showBarBackground: false,
     showDetailLabels: false,
+    showDetailLabelsInsideBars: false,
     detailLabelFontSize: DEFAULT_DETAIL_LABEL_FONT_SIZE,
     detailLabelColor: DEFAULT_DETAIL_LABEL_COLOR,
     baseColorSchemeId: 'classic',
@@ -100,6 +106,20 @@ export function firstAvailableSeriesColor(
 
 export function normalizeHexColor(value: string): string | null {
   return /^#[\dA-F]{6}$/i.test(value) ? value.toUpperCase() : null
+}
+
+export function deriveSeriesGradientStartColor(baseColor: string): string {
+  const color = normalizeHexColor(baseColor)
+  if (!color) throw new Error('Series gradient requires an opaque six-digit hex color.')
+
+  const channels = [1, 3, 5].map((offset) => {
+    const channel = Number.parseInt(color.slice(offset, offset + 2), 16)
+    return Math.round(channel + (255 - channel) * 0.35)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase()
+  })
+  return `#${channels.join('')}`
 }
 
 export type FixedIntervalValidation =

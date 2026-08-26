@@ -10,8 +10,8 @@ describe('createChartOption Bar Chart behavior', () => {
       xAxisFieldId: 0,
       labels: ['华东', '华南'],
       series: [
-        { fieldId: 2, fieldName: '利润', color: '#D97706', values: [16, 21] },
-        { fieldId: 1, fieldName: '销售额', color: '#2563EB', values: [86, 104] },
+        { fieldId: 2, fieldName: '利润', color: '#D97706', seriesGradient: false, values: [16, 21] },
+        { fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [86, 104] },
       ],
       settings: {
         ...createDefaultChartSettings(),
@@ -60,10 +60,24 @@ describe('createChartOption Bar Chart behavior', () => {
     const series = option.series as Array<Record<string, unknown>>
     expect(series).toMatchObject([
       {
-        type: 'bar', name: '利润', data: [16, 21], itemStyle: { color: '#D97706' }, barMaxWidth: 72,
+        type: 'bar',
+        name: '利润',
+        data: [
+          { value: 16, itemStyle: { borderRadius: 0 } },
+          { value: 21, itemStyle: { borderRadius: 0 } },
+        ],
+        itemStyle: { color: '#D97706' },
+        barMaxWidth: 72,
       },
       {
-        type: 'bar', name: '销售额', data: [86, 104], itemStyle: { color: '#2563EB' }, barMaxWidth: 72,
+        type: 'bar',
+        name: '销售额',
+        data: [
+          { value: 86, itemStyle: { borderRadius: 0 } },
+          { value: 104, itemStyle: { borderRadius: 0 } },
+        ],
+        itemStyle: { color: '#2563EB' },
+        barMaxWidth: 72,
       },
     ])
     expect(series[0]).toMatchObject({
@@ -127,6 +141,82 @@ describe('createChartOption Bar Chart behavior', () => {
     const chartImageAxisFormatter = (chartImageYAxis.axisLabel as { formatter: (value: number) => string }).formatter
     expect(chartImageAxisFormatter(86)).toBe(previewAxisFormatter(86))
   })
+
+  test('rounds only the free end of positive and negative Bars and links the background shape', () => {
+    const model = barModel()
+    model.series[0]!.values = [20, -15, 0]
+    model.labels = ['正值', '负值', '零值']
+    model.settings = {
+      ...model.settings,
+      roundedBars: true,
+      showBarBackground: true,
+    }
+
+    const series = (createChartOption(model).series as unknown[])?.[0]
+    expect(series).toMatchObject({
+      showBackground: true,
+      backgroundStyle: {
+        color: 'rgba(180, 180, 180, 0.2)',
+        borderRadius: 100,
+      },
+      data: [
+        { value: 20, itemStyle: { borderRadius: [100, 100, 0, 0] } },
+        { value: -15, itemStyle: { borderRadius: [0, 0, 100, 100] } },
+        { value: 0, itemStyle: { borderRadius: 0 } },
+      ],
+    })
+  })
+
+  test('keeps Bars and optional backgrounds square by default', () => {
+    const series = (createChartOption(barModel()).series as unknown[])?.[0]
+    expect(series).toMatchObject({
+      showBackground: false,
+      backgroundStyle: {
+        color: 'rgba(180, 180, 180, 0.2)',
+        borderRadius: 0,
+      },
+      data: [{ value: 86, itemStyle: { borderRadius: 0 } }],
+    })
+  })
+
+  test('centers Bar Detail Labels with a base-color contrast color and hides labels that do not fit', () => {
+    const model = barModel()
+    model.series[0]!.values = [86, 0]
+    model.settings = {
+      ...model.settings,
+      showDetailLabels: true,
+      showDetailLabelsInsideBars: true,
+      yAxisUnit: '万元',
+    }
+    const series = (createChartOption(model).series as unknown[])?.[0] as {
+      label: { formatter: (params: { value: unknown }) => string }
+      labelLayout: (params: { rect: { width: number, height: number }, labelRect: { width: number, height: number } }) => object
+    }
+
+    expect(series).toMatchObject({
+      label: { show: true, position: 'inside', distance: 0, color: '#FFFFFF' },
+    })
+    expect(series.label.formatter({ value: 86 })).toBe('86万元')
+    expect(series.label.formatter({ value: 0 })).toBe('')
+    expect(series.labelLayout({
+      rect: { width: 80, height: 30 },
+      labelRect: { width: 40, height: 14 },
+    })).toEqual({ hideOverlap: true })
+    expect(series.labelLayout({
+      rect: { width: 30, height: 12 },
+      labelRect: { width: 40, height: 14 },
+    })).toEqual({ fontSize: 0 })
+  })
+
+  test('uses black for inside labels when it has higher contrast against the Bar color', () => {
+    const model = barModel()
+    model.series[0]!.color = '#D97706'
+    model.settings = { ...model.settings, showDetailLabels: true, showDetailLabelsInsideBars: true }
+
+    expect((createChartOption(model).series as unknown[])?.[0]).toMatchObject({
+      label: { color: '#000000' },
+    })
+  })
 })
 
 function serializableOption(value: unknown) {
@@ -140,8 +230,8 @@ describe('createChartOption Line Chart behavior', () => {
       xAxisFieldId: 0,
       labels: ['一月', '二月', '三月'],
       series: [
-        { fieldId: 2, fieldName: '利润', color: '#D97706', values: [10, null, 30] },
-        { fieldId: 1, fieldName: '销售额', color: '#2563EB', values: [20, 25, 28] },
+        { fieldId: 2, fieldName: '利润', color: '#D97706', seriesGradient: false, values: [10, null, 30] },
+        { fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [20, 25, 28] },
       ],
       settings: {
         ...createDefaultChartSettings(),
@@ -162,7 +252,12 @@ describe('createChartOption Line Chart behavior', () => {
     const firstSeries = (option.series as unknown[])?.[0]
 
     expect(option.tooltip).toMatchObject({ trigger: 'axis', axisPointer: { type: 'line', snap: true } })
-    expect(option.legend).toMatchObject({ data: ['利润', '销售额'] })
+    expect(option.legend).toMatchObject({
+      data: [
+        { name: '利润', itemStyle: { color: '#D97706' } },
+        { name: '销售额', itemStyle: { color: '#2563EB' } },
+      ],
+    })
     expect(firstSeries).toMatchObject({
       type: 'line',
       name: '利润',
@@ -190,6 +285,7 @@ describe('createChartOption Line Chart behavior', () => {
       fieldId: 1,
       fieldName: '销售额',
       color: '#2563EB',
+      seriesGradient: false,
       values: Array.from({ length: 100 }, (_, index) => index + 1),
     }]
 
@@ -197,6 +293,62 @@ describe('createChartOption Line Chart behavior', () => {
       showSymbol: true,
       showAllSymbol: true,
       data: model.series[0]!.values,
+    })
+  })
+
+  test.each([
+    [true, false, 8, { color: '#D97706', borderWidth: 0 }],
+    [true, true, 8, { color: 'transparent', borderColor: '#D97706', borderWidth: 2 }],
+    [false, false, 0, { color: '#D97706', borderWidth: 0 }],
+    [false, true, 0, { color: 'transparent', borderColor: '#D97706', borderWidth: 2 }],
+  ] as const)('maps Point visibility %s and hollow state %s independently', (
+    showLinePoints,
+    hollowLinePoints,
+    symbolSize,
+    itemStyle,
+  ) => {
+    const model = lineModel('straight')
+    model.settings = { ...model.settings, showLinePoints, hollowLinePoints }
+
+    expect((createChartOption(model).series as unknown[])?.[0]).toMatchObject({
+      showSymbol: true,
+      showAllSymbol: true,
+      symbolSize,
+      itemStyle,
+    })
+  })
+
+  test('applies a per-Series left-to-right gradient to Line and Area while keeping Points and legend in the base color', () => {
+    const model = lineModel('straight', true)
+    model.series[0]!.seriesGradient = true
+    const option = createChartOption(model)
+    const gradient = {
+      type: 'linear',
+      x: 0,
+      y: 0,
+      x2: 1,
+      y2: 0,
+      global: false,
+      colorStops: [
+        { offset: 0, color: '#E6A75D' },
+        { offset: 1, color: '#D97706' },
+      ],
+    }
+
+    expect((option.series as unknown[])?.[0]).toMatchObject({
+      lineStyle: { color: gradient },
+      areaStyle: { color: gradient },
+      itemStyle: { color: '#D97706' },
+    })
+    expect((option.series as unknown[])?.[1]).toMatchObject({
+      lineStyle: { color: '#2563EB' },
+      areaStyle: { color: '#2563EB' },
+    })
+    expect(option.legend).toMatchObject({
+      data: [
+        { name: '利润', itemStyle: { color: '#D97706' } },
+        { name: '销售额', itemStyle: { color: '#2563EB' } },
+      ],
     })
   })
 
@@ -232,12 +384,23 @@ describe('createChartOption Line Chart behavior', () => {
   })
 })
 
+test('toggles only Y Axis split lines', () => {
+  const model = barModel()
+  model.settings = { ...model.settings, showYAxisSplitLines: false }
+
+  expect(createChartOption(model).yAxis).toMatchObject({
+    axisLine: { show: false },
+    axisTick: { show: false },
+    splitLine: { show: false, lineStyle: { color: '#E9EDF3' } },
+  })
+})
+
 function barModel(): BarChartModel {
   return {
     title: '销售',
     xAxisFieldId: 0,
     labels: ['华东'],
-    series: [{ fieldId: 1, fieldName: '销售额', color: '#2563EB', values: [86] }],
+    series: [{ fieldId: 1, fieldName: '销售额', color: '#2563EB', seriesGradient: false, values: [86] }],
     settings: { ...createDefaultChartSettings(), chartType: 'bar' },
   }
 }

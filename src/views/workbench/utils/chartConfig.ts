@@ -17,6 +17,7 @@ import type { ComposeOption } from 'echarts/core'
 import { LabelLayout } from 'echarts/features'
 import { CanvasRenderer } from 'echarts/renderers'
 import type { ChartModel } from './model'
+import { deriveSeriesGradientStartColor } from './chartSettings'
 
 export const SERIES_COLORS = ['#2563EB', '#D97706', '#059669', '#DC2626', '#7C3AED'] as const
 export const CHART_BLUE = SERIES_COLORS[0]
@@ -69,7 +70,12 @@ export function createChartOption(
       },
     },
     legend: {
-      data: model.series.map(series => series.fieldName),
+      data: model.settings.chartType === 'line'
+        ? model.series.map(series => ({
+            name: series.fieldName,
+            itemStyle: { color: series.color },
+          }))
+        : model.series.map(series => series.fieldName),
       top: forExport ? 82 : 62,
       itemWidth: forExport ? 20 : 14,
       itemHeight: forExport ? 12 : 9,
@@ -126,7 +132,10 @@ export function createChartOption(
       },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#E9EDF3' } },
+      splitLine: {
+        show: model.settings.showYAxisSplitLines,
+        lineStyle: { color: '#E9EDF3' },
+      },
       axisLabel: {
         color: model.settings.yAxisTickLabelColor,
         fontFamily: CHART_FONT,
@@ -151,11 +160,21 @@ function createBarSeries(
   return {
     type: 'bar',
     name: series.fieldName,
-    data: [...series.values],
-    itemStyle: { color: series.color, borderRadius: [3, 3, 0, 0] },
+    data: series.values.map(value => ({
+      value,
+      itemStyle: {
+        borderRadius: barBorderRadius(value, model.settings.roundedBars),
+      },
+    })),
+    itemStyle: { color: series.color },
     barMaxWidth: model.settings.maxBarThickness,
+    showBackground: model.settings.showBarBackground,
+    backgroundStyle: {
+      color: 'rgba(180, 180, 180, 0.2)',
+      borderRadius: model.settings.roundedBars ? 100 : 0,
+    },
     emphasis: { focus: 'series' },
-    ...detailLabel(model, unit),
+    ...barDetailLabel(model, series.color, unit),
   }
 }
 
@@ -164,6 +183,9 @@ function createLineSeries(
   series: ChartModel['series'][number],
   unit: string,
 ): LineSeriesOption {
+  const seriesColor = series.seriesGradient
+    ? seriesGradient(series.color)
+    : series.color
   return {
     type: 'line',
     name: series.fieldName,
@@ -172,20 +194,22 @@ function createLineSeries(
     showSymbol: true,
     showAllSymbol: true,
     symbol: 'circle',
-    symbolSize: 8,
+    symbolSize: model.settings.showLinePoints ? 8 : 0,
     smooth: model.settings.lineStyle === 'smooth',
     smoothMonotone: 'x',
-    lineStyle: { color: series.color, width: 2 },
-    itemStyle: { color: series.color },
+    lineStyle: { color: seriesColor, width: 2 },
+    itemStyle: model.settings.hollowLinePoints
+      ? { color: 'transparent', borderColor: series.color, borderWidth: 2 }
+      : { color: series.color, borderWidth: 0 },
     ...(model.settings.areaFill
-      ? { areaStyle: { color: series.color, opacity: 0.15, origin: 'auto' as const } }
+      ? { areaStyle: { color: seriesColor, opacity: 0.15, origin: 'auto' as const } }
       : {}),
     emphasis: { focus: 'series', scale: 1.25 },
-    ...detailLabel(model, unit),
+    ...lineDetailLabel(model, unit),
   }
 }
 
-function detailLabel(model: ChartModel, unit: string) {
+function lineDetailLabel(model: ChartModel, unit: string) {
   return {
     label: {
       show: model.settings.showDetailLabels,
@@ -199,6 +223,71 @@ function detailLabel(model: ChartModel, unit: string) {
     },
     labelLayout: { hideOverlap: true },
   }
+}
+
+function barDetailLabel(model: ChartModel, seriesColor: string, unit: string) {
+  const inside = model.settings.showDetailLabelsInsideBars
+  return {
+    label: {
+      show: model.settings.showDetailLabels,
+      position: inside ? 'inside' as const : 'top' as const,
+      distance: inside ? 0 : 6,
+      color: inside ? contrastingTextColor(seriesColor) : model.settings.detailLabelColor,
+      fontFamily: CHART_FONT,
+      fontSize: model.settings.detailLabelFontSize,
+      fontWeight: 600,
+      formatter: ({ value }: { value: unknown }) => {
+        if (inside && numericValue(value) === 0) return ''
+        return formatValue(value, unit)
+      },
+    },
+    labelLayout: inside
+      ? ({ rect, labelRect }: {
+          rect: { width: number, height: number }
+          labelRect: { width: number, height: number }
+        }) => rect.width >= labelRect.width + 4 && rect.height >= labelRect.height + 4
+          ? { hideOverlap: true }
+          : { fontSize: 0 }
+      : { hideOverlap: true },
+  }
+}
+
+function barBorderRadius(value: number | null, rounded: boolean): number | number[] {
+  if (!rounded || value === null || value === 0) return 0
+  return value > 0 ? [100, 100, 0, 0] : [0, 0, 100, 100]
+}
+
+function seriesGradient(baseColor: string) {
+  return {
+    type: 'linear' as const,
+    x: 0,
+    y: 0,
+    x2: 1,
+    y2: 0,
+    global: false,
+    colorStops: [
+      { offset: 0, color: deriveSeriesGradientStartColor(baseColor) },
+      { offset: 1, color: baseColor },
+    ],
+  }
+}
+
+function contrastingTextColor(backgroundColor: string) {
+  const channels = [1, 3, 5].map((offset) => {
+    const channel = Number.parseInt(backgroundColor.slice(offset, offset + 2), 16) / 255
+    return channel <= 0.04045
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  const luminance = 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
+  const blackContrast = (luminance + 0.05) / 0.05
+  const whiteContrast = 1.05 / (luminance + 0.05)
+  return blackContrast >= whiteContrast ? '#000000' : '#FFFFFF'
+}
+
+function numericValue(value: unknown) {
+  const displayValue = Array.isArray(value) ? value.at(-1) : value
+  return typeof displayValue === 'number' ? displayValue : null
 }
 
 function formatValue(value: unknown, unit: string) {

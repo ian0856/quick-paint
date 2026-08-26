@@ -9,6 +9,7 @@ import SeriesColorSettings from './SeriesColorSettings.vue'
 import BarLayoutSettings from './BarLayoutSettings.vue'
 import ChartDetailLabelSettings from './ChartDetailLabelSettings.vue'
 import ChartLabelSettings from './ChartLabelSettings.vue'
+import LinePointSettings from './LinePointSettings.vue'
 import ChartTitleSettings from './ChartTitleSettings.vue'
 import ChartTypeSettings from './ChartTypeSettings.vue'
 
@@ -27,7 +28,14 @@ const {
 
 const series = computed(() => yAxisFields.value.flatMap((selection) => {
   const field = worksheet.value?.fields.find(item => item.id === selection.fieldId)
-  return field ? [{ fieldId: field.id, label: field.label, color: selection.color }] : []
+  return field
+    ? [{
+        fieldId: field.id,
+        label: field.label,
+        color: selection.color,
+        seriesGradient: selection.seriesGradient,
+      }]
+    : []
 }))
 const diagnostic = computed(() => {
   if (hasInvalidTableEdits.value) return sourceTableValidation.value.message
@@ -55,13 +63,25 @@ const diagnostic = computed(() => {
           @update-area-fill="store.updateAreaFill"
         />
       </div>
+      <div v-if="chartSettings.chartType === 'line'" class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
+        <LinePointSettings
+          :show-points="chartSettings.showLinePoints"
+          :hollow-points="chartSettings.hollowLinePoints"
+          :disabled="chartSettingsDisabled"
+          @update-show-points="store.updateShowLinePoints"
+          @update-hollow-points="store.updateHollowLinePoints"
+        />
+      </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <ChartDetailLabelSettings
+          :chart-type="chartSettings.chartType"
           :show-detail-labels="chartSettings.showDetailLabels"
+          :show-inside-bars="chartSettings.showDetailLabelsInsideBars"
           :font-size="chartSettings.detailLabelFontSize"
           :color="chartSettings.detailLabelColor"
           :disabled="chartSettingsDisabled"
           @update-show-detail-labels="store.updateShowDetailLabels"
+          @update-show-inside-bars="store.updateShowDetailLabelsInsideBars"
           @update-font-size="store.updateDetailLabelFontSize"
           @update-color="store.updateDetailLabelColor"
         />
@@ -82,16 +102,22 @@ const diagnostic = computed(() => {
         <SeriesColorSettings
           :series="series"
           :active-scheme="activeColorScheme"
+          :show-series-gradient="chartSettings.chartType === 'line'"
           :disabled="chartSettingsDisabled"
           @select-scheme="store.selectSeriesColorScheme"
           @update-color="store.updateValueSeriesColor"
+          @update-series-gradient="store.updateSeriesGradient"
         />
       </div>
       <div v-if="chartSettings.chartType === 'bar'" class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
         <BarLayoutSettings
           :max-bar-thickness="chartSettings.maxBarThickness"
+          :rounded-bars="chartSettings.roundedBars"
+          :show-bar-background="chartSettings.showBarBackground"
           :disabled="chartSettingsDisabled"
           @update-max-bar-thickness="store.updateMaxBarThickness"
+          @update-rounded-bars="store.updateRoundedBars"
+          @update-show-bar-background="store.updateShowBarBackground"
         />
       </div>
       <div class="border-t border-base py-5" :class="chartSettingsDisabled ? 'opacity-55' : ''">
@@ -112,6 +138,7 @@ const diagnostic = computed(() => {
           :x-axis-name-color="chartSettings.xAxisNameColor"
           :y-axis-name-color="chartSettings.yAxisNameColor"
           :y-axis-unit="chartSettings.yAxisUnit"
+          :show-y-axis-split-lines="chartSettings.showYAxisSplitLines"
           :x-axis-tick-label-font-size="chartSettings.xAxisTickLabelFontSize"
           :y-axis-tick-label-font-size="chartSettings.yAxisTickLabelFontSize"
           :x-axis-tick-label-color="chartSettings.xAxisTickLabelColor"
@@ -127,6 +154,7 @@ const diagnostic = computed(() => {
           @update-x-axis-name-color="store.updateXAxisNameColor"
           @update-y-axis-name-color="store.updateYAxisNameColor"
           @update-y-axis-unit="store.updateYAxisUnit"
+          @update-show-y-axis-split-lines="store.updateShowYAxisSplitLines"
           @update-x-axis-tick-label-font-size="store.updateXAxisTickLabelFontSize"
           @update-y-axis-tick-label-font-size="store.updateYAxisTickLabelFontSize"
           @update-x-axis-tick-label-color="store.updateXAxisTickLabelColor"
