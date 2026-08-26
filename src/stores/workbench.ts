@@ -194,7 +194,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId.value = savedMapping.xAxisFieldId
       yAxisFields.value = savedMapping.yAxisFields.map((field) => ({ ...field }))
       fieldSettings = new Map(savedMapping.fieldSettings)
-      chartSettings.value = { ...savedMapping.chartSettings }
+      chartSettings.value = cloneChartSettings(savedMapping.chartSettings)
     }
     else {
       const mapping = inferUniqueMapping(worksheet)
@@ -461,8 +461,22 @@ export const useWorkbenchStore = defineStore('workbench', () => {
   }
 
   function updateYAxisUnit(value: string) {
-    if (value.length > MAX_AXIS_UNIT_LENGTH) return
-    chartSettings.value = { ...chartSettings.value, yAxisUnit: value }
+    const yAxisUnit = value.trim()
+    if (yAxisUnit.length > MAX_AXIS_UNIT_LENGTH) return
+    chartSettings.value = { ...chartSettings.value, yAxisUnit }
+    finishChartChange()
+  }
+
+  function updateYAxisUnitDisplayLocations(locations: ChartSettings['yAxisUnitDisplayLocations']) {
+    const validLocations = new Set<ChartSettings['yAxisUnitDisplayLocations'][number]>(['detail', 'tick', 'top'])
+    if (
+      new Set(locations).size !== locations.length
+      || locations.some(location => !validLocations.has(location))
+    ) return
+    chartSettings.value = {
+      ...chartSettings.value,
+      yAxisUnitDisplayLocations: [...locations],
+    }
     finishChartChange()
   }
 
@@ -538,7 +552,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
       xAxisFieldId: xAxisFieldId.value,
       yAxisFields: yAxisFields.value.map((field) => ({ ...field })),
       fieldSettings: new Map(fieldSettings),
-      chartSettings: { ...chartSettings.value },
+      chartSettings: cloneChartSettings(chartSettings.value),
     })
   }
 
@@ -648,6 +662,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateXAxisNameColor,
     updateYAxisNameColor,
     updateYAxisUnit,
+    updateYAxisUnitDisplayLocations,
     updateLegendFontSize,
     updateLegendLayout,
     updateLegendPosition,
@@ -666,6 +681,13 @@ function isValidChartFontSize(value: number) {
   return Number.isInteger(value)
     && value >= MIN_CHART_FONT_SIZE
     && value <= MAX_CHART_FONT_SIZE
+}
+
+function cloneChartSettings(settings: ChartSettings): ChartSettings {
+  return {
+    ...settings,
+    yAxisUnitDisplayLocations: [...settings.yAxisUnitDisplayLocations],
+  }
 }
 
 if (import.meta.hot)

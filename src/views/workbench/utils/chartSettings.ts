@@ -71,6 +71,7 @@ export function createDefaultChartSettings(): ChartSettings {
     xAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
     yAxisNameColor: DEFAULT_AXIS_NAME_COLOR,
     yAxisUnit: '',
+    yAxisUnitDisplayLocations: ['top'],
     legendFontSize: DEFAULT_LEGEND_FONT_SIZE,
     xAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,
     yAxisTickLabelFontSize: DEFAULT_AXIS_TICK_LABEL_FONT_SIZE,

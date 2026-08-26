@@ -71,6 +71,7 @@ export type ChartType = 'bar' | 'line'
 export type LineStyle = 'straight' | 'smooth'
 export type LegendLayout = 'horizontal' | 'vertical'
 export type LegendPosition = 'left' | 'center' | 'right'
+export type YAxisUnitDisplayLocation = 'detail' | 'tick' | 'top'
 
 export type ChartSettings = {
   chartType: ChartType
@@ -98,6 +99,7 @@ export type ChartSettings = {
   xAxisNameColor: string
   yAxisNameColor: string
   yAxisUnit: string
+  yAxisUnitDisplayLocations: YAxisUnitDisplayLocation[]
   legendFontSize: number
   xAxisTickLabelFontSize: number
   yAxisTickLabelFontSize: number

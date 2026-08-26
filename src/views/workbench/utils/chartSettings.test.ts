@@ -35,6 +35,7 @@ describe('chart settings', () => {
       xAxisNameColor: '#344054',
       yAxisNameColor: '#344054',
       yAxisUnit: '',
+      yAxisUnitDisplayLocations: ['top'],
       legendFontSize: 11,
       xAxisTickLabelFontSize: 11,
       yAxisTickLabelFontSize: 11,

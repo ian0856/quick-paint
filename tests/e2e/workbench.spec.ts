@@ -24,6 +24,45 @@ async function selectSettingsGroup(settings: Locator, name: '图形' | 'x轴' | 
   await expect(button).toHaveAttribute('aria-current', 'page')
 }
 
+test('keeps every horizontal Legend item on the same row', async ({ page }) => {
+  await page.goto('/workbench')
+  await importFile(page, '区域销售.csv', 'text/csv', Buffer.from([
+    '月份,华东,华南,华西,华北',
+    '一月,86,62,48,71',
+  ].join('\n')))
+
+  const canvas = page.locator('.chart-panel canvas')
+  await expect(canvas).toBeVisible()
+  const markerRanges = await canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('2d')!
+    const { width, height } = context.canvas
+    const maxY = Math.ceil(height * 0.1)
+    const pixels = context.getImageData(0, 0, width, maxY).data
+    const colors = [[37, 99, 235], [217, 119, 6], [5, 150, 105], [220, 38, 38]]
+    return colors.map((color) => {
+      let minY = maxY
+      let maxMarkerY = -1
+      for (let y = 0; y < maxY; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = (y * width + x) * 4
+          if (
+            Math.abs(pixels[index]! - color[0]!) <= 8
+            && Math.abs(pixels[index + 1]! - color[1]!) <= 8
+            && Math.abs(pixels[index + 2]! - color[2]!) <= 8
+          ) {
+            minY = Math.min(minY, y)
+            maxMarkerY = Math.max(maxMarkerY, y)
+          }
+        }
+      }
+      return { minY, maxY: maxMarkerY }
+    })
+  })
+
+  expect(markerRanges.every(range => range.maxY >= range.minY)).toBe(true)
+  expect(new Set(markerRanges.map(range => `${range.minY}:${range.maxY}`)).size).toBe(1)
+})
+
 test('imports CSV, switches to the read-only table, and exports a real PNG', async ({ page }) => {
   await page.goto('/workbench')
 
@@ -140,7 +179,38 @@ test('renders ECharts tooltips and details without duplicating or resizing the C
 
   const settings = page.getByRole('complementary', { name: '高级设置侧边栏' })
   await selectSettingsGroup(settings, 'y轴')
-  await settings.getByRole('textbox', { name: 'y轴单位' }).fill('万元')
+  const unitInput = settings.getByRole('textbox', { name: 'y轴单位' })
+  const detailUnit = settings.getByRole('checkbox', { name: '详情' })
+  const tickUnit = settings.getByRole('checkbox', { name: 'Y 轴刻度' })
+  const topUnit = settings.getByRole('checkbox', { name: 'Y 轴顶部' })
+  await expect(detailUnit).toBeDisabled()
+  await expect(tickUnit).toBeDisabled()
+  await expect(topUnit).toBeDisabled()
+  await expect(detailUnit).not.toBeChecked()
+  await expect(tickUnit).not.toBeChecked()
+  await expect(topUnit).toBeChecked()
+
+  await unitInput.fill('  万元  ')
+  await expect(unitInput).toHaveValue('万元')
+  await expect(detailUnit).toBeEnabled()
+  await settings.getByText('Y 轴顶部', { exact: true }).click()
+  await settings.getByText('详情', { exact: true }).click()
+  await settings.getByText('Y 轴刻度', { exact: true }).click()
+  await unitInput.fill('   ')
+  await expect(unitInput).toHaveValue('')
+  await expect(detailUnit).toBeDisabled()
+  await expect(detailUnit).toBeChecked()
+  await expect(tickUnit).toBeChecked()
+
+  await unitInput.fill('万元')
+  await settings.getByText('详情', { exact: true }).click()
+  await settings.getByText('Y 轴刻度', { exact: true }).click()
+  await expect(detailUnit).not.toBeChecked()
+  await expect(tickUnit).not.toBeChecked()
+  await expect(topUnit).not.toBeChecked()
+  await settings.getByText('详情', { exact: true }).click()
+  await settings.getByText('Y 轴刻度', { exact: true }).click()
+  await settings.getByText('Y 轴顶部', { exact: true }).click()
   await selectSettingsGroup(settings, '图形')
   const barSurface = page.getByRole('img', { name: '柱状图：Sheet1，共 3 条数据，2 个数值系列' })
   await expect(barSurface).toBeVisible()
@@ -754,7 +824,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(xTickFontSize).toHaveValue('12')
   await selectSettingsGroup(settings, 'y轴')
   await settings.getByRole('textbox', { name: 'y轴名称' }).fill('销售额')
-  await settings.getByRole('textbox', { name: 'y轴单位' }).fill('万元')
+  await settings.getByRole('textbox', { name: 'y轴单位' }).fill(' 万元 ')
+  await settings.getByText('Y 轴顶部', { exact: true }).click()
+  await settings.getByText('详情', { exact: true }).click()
+  await settings.getByText('Y 轴刻度', { exact: true }).click()
   await selectSettingsGroup(settings, '图形')
   await settings.getByText('折线图', { exact: true }).click()
   await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
@@ -792,6 +865,10 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('textbox', { name: 'x轴名称' })).toHaveValue('x轴')
   await selectSettingsGroup(settings, 'y轴')
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).toBeChecked()
+  await expect(settings.getByRole('checkbox', { name: '详情' })).toBeDisabled()
+  await expect(settings.getByRole('checkbox', { name: '详情' })).not.toBeChecked()
+  await expect(settings.getByRole('checkbox', { name: 'Y 轴刻度' })).not.toBeChecked()
+  await expect(settings.getByRole('checkbox', { name: 'Y 轴顶部' })).toBeChecked()
   await selectSettingsGroup(settings, '图形')
   await expect(settings.getByRole('button', { name: '画布颜色' })).toHaveAttribute('aria-description', /#FFFFFF/i)
   await expect(settings.getByRole('radio', { name: /经典/ })).toBeChecked()
@@ -816,6 +893,9 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await selectSettingsGroup(settings, 'y轴')
   await expect(settings.getByRole('textbox', { name: 'y轴名称' })).toHaveValue('销售额')
   await expect(settings.getByRole('textbox', { name: 'y轴单位' })).toHaveValue('万元')
+  await expect(settings.getByRole('checkbox', { name: '详情' })).toBeChecked()
+  await expect(settings.getByRole('checkbox', { name: 'Y 轴刻度' })).toBeChecked()
+  await expect(settings.getByRole('checkbox', { name: 'Y 轴顶部' })).not.toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示 Y 轴分割线' })).not.toBeChecked()
   await selectSettingsGroup(settings, '图形')
   await expect(settings.getByRole('button', { name: '画布颜色' })).toHaveAttribute('aria-description', /#F0F4F880/i)

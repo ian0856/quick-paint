@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ElColorPicker, ElInput, ElInputNumber, ElSwitch } from 'element-plus'
+import type { CheckboxValueType } from 'element-plus'
+import { ElCheckbox, ElCheckboxGroup, ElColorPicker, ElInput, ElInputNumber, ElSwitch } from 'element-plus'
+import { computed } from 'vue'
+import type { YAxisUnitDisplayLocation } from '../utils'
 import {
   MAX_AXIS_NAME_LENGTH,
   MAX_AXIS_UNIT_LENGTH,
@@ -7,7 +10,7 @@ import {
   MIN_CHART_FONT_SIZE,
 } from '../utils'
 
-defineProps<{
+const props = defineProps<{
   axis: 'x' | 'y'
   xAxisName: string
   yAxisName: string
@@ -16,6 +19,7 @@ defineProps<{
   xAxisNameColor: string
   yAxisNameColor: string
   yAxisUnit: string
+  yAxisUnitDisplayLocations: YAxisUnitDisplayLocation[]
   showYAxisSplitLines: boolean
   xAxisTickLabelFontSize: number
   yAxisTickLabelFontSize: number
@@ -32,12 +36,15 @@ const emit = defineEmits<{
   updateXAxisNameColor: [value: string]
   updateYAxisNameColor: [value: string]
   updateYAxisUnit: [value: string]
+  updateYAxisUnitDisplayLocations: [value: YAxisUnitDisplayLocation[]]
   updateShowYAxisSplitLines: [value: boolean]
   updateXAxisTickLabelFontSize: [value: number]
   updateYAxisTickLabelFontSize: [value: number]
   updateXAxisTickLabelColor: [value: string]
   updateYAxisTickLabelColor: [value: string]
 }>()
+
+const yAxisUnitLocationsDisabled = computed(() => props.disabled || props.yAxisUnit.length === 0)
 
 function updateXAxisTickLabelFontSize(value: number | undefined) {
   if (value !== undefined) emit('updateXAxisTickLabelFontSize', value)
@@ -69,6 +76,10 @@ function updateXAxisTickLabelColor(color: string | null) {
 
 function updateYAxisTickLabelColor(color: string | null) {
   if (color) emit('updateYAxisTickLabelColor', color)
+}
+
+function updateYAxisUnitDisplayLocations(value: CheckboxValueType[]) {
+  emit('updateYAxisUnitDisplayLocations', value as YAxisUnitDisplayLocation[])
 }
 </script>
 
@@ -208,6 +219,21 @@ function updateYAxisTickLabelColor(color: string | null) {
       aria-label="y轴单位"
       @input="emit('updateYAxisUnit', $event)"
     />
+
+    <div class="mt-3">
+      <span class="control-label mt-0 block">单位显示位置</span>
+      <ElCheckboxGroup
+        class="mt-1 flex flex-wrap gap-x-4 gap-y-1"
+        :model-value="yAxisUnitDisplayLocations"
+        :disabled="yAxisUnitLocationsDisabled"
+        aria-label="单位显示位置"
+        @change="updateYAxisUnitDisplayLocations"
+      >
+        <ElCheckbox value="detail">详情</ElCheckbox>
+        <ElCheckbox value="tick">Y 轴刻度</ElCheckbox>
+        <ElCheckbox value="top">Y 轴顶部</ElCheckbox>
+      </ElCheckboxGroup>
+    </div>
 
     <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
       <div>

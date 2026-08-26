@@ -1,12 +1,14 @@
 import { BarChart, LineChart } from 'echarts/charts'
 import type { BarSeriesOption, LineSeriesOption } from 'echarts/charts'
 import {
+  GraphicComponent,
   GridComponent,
   LegendComponent,
   TitleComponent,
   TooltipComponent,
 } from 'echarts/components'
 import type {
+  GraphicComponentOption,
   GridComponentOption,
   LegendComponentOption,
   TitleComponentOption,
@@ -28,6 +30,7 @@ export const CHART_SURFACE_HEIGHT = 900
 export type ChartOption = ComposeOption<
   | BarSeriesOption
   | LineSeriesOption
+  | GraphicComponentOption
   | GridComponentOption
   | LegendComponentOption
   | TitleComponentOption
@@ -45,6 +48,7 @@ type ChartOptionBuildOptions = {
 use([
   BarChart,
   LineChart,
+  GraphicComponent,
   GridComponent,
   LegendComponent,
   TitleComponent,
@@ -59,22 +63,26 @@ export function createChartOption(
 ): ChartOption {
   const forExport = options.forExport === true
   const metrics = legendMetrics(forExport)
+  const measureText = options.measureText ?? canvasTextMeasurer()
   const legend = calculateLegendBox(
     model,
     options.chartWidth ?? CHART_SURFACE_WIDTH,
     metrics,
-    options.measureText ?? canvasTextMeasurer(),
+    measureText,
   )
   const unit = model.settings.yAxisUnit.trim()
+  const unitLocations = new Set(model.settings.yAxisUnitDisplayLocations)
+  const detailUnit = unitLocations.has('detail') ? unit : ''
+  const tickUnit = unitLocations.has('tick') ? unit : ''
+  const topUnit = unit && unitLocations.has('top') ? `单位：${unit}` : ''
   const valueFormatter = (value: unknown) => formatValue(value, unit)
+  const grid = chartGrid(forExport, legend, Boolean(topUnit), model.settings.yAxisTickLabelFontSize)
 
   return {
     animation: false,
     backgroundColor: model.settings.canvasColor,
     textStyle: { fontFamily: CHART_FONT },
-    grid: forExport
-      ? { top: Math.max(132, legend.top + legend.height + 32), right: 72, bottom: 90, left: 110, containLabel: true }
-      : { top: Math.max(104, legend.top + legend.height + 24), right: 36, bottom: 62, left: 72, containLabel: true },
+    grid,
     title: {
       text: model.title,
       left: 'center',
@@ -103,6 +111,7 @@ export function createChartOption(
       itemWidth: metrics.itemWidth,
       itemHeight: metrics.itemHeight,
       itemGap: metrics.itemGap,
+      padding: 0,
       textStyle: {
         color: '#344054',
         fontFamily: CHART_FONT,
@@ -119,6 +128,27 @@ export function createChartOption(
         : { type: 'shadow' },
       valueFormatter,
       textStyle: { fontFamily: CHART_FONT },
+    },
+    graphic: {
+      elements: topUnit
+        ? [{
+            id: 'y-axis-unit',
+            type: 'text',
+            left: grid.left + yAxisContentOffset(model, tickUnit, measureText),
+            top: grid.top - Math.ceil(model.settings.yAxisTickLabelFontSize * 1.5) - (forExport ? 8 : 6),
+            silent: true,
+            style: {
+              text: topUnit,
+              fill: model.settings.yAxisTickLabelColor,
+              fontFamily: CHART_FONT,
+              fontSize: model.settings.yAxisTickLabelFontSize,
+              fontWeight: 400,
+              lineHeight: Math.ceil(model.settings.yAxisTickLabelFontSize * 1.5),
+              align: 'left',
+              verticalAlign: 'top',
+            },
+          }]
+        : [],
     },
     xAxis: {
       type: 'category',
@@ -164,13 +194,39 @@ export function createChartOption(
         color: model.settings.yAxisTickLabelColor,
         fontFamily: CHART_FONT,
         fontSize: model.settings.yAxisTickLabelFontSize,
-        formatter: (value: number) => formatValue(value, unit),
+        formatter: (value: number) => formatValue(value, tickUnit),
       },
     },
     series: model.series.map(series => model.settings.chartType === 'bar'
-      ? createBarSeries(model, series, unit)
-      : createLineSeries(model, series, unit)),
+      ? createBarSeries(model, series, detailUnit)
+      : createLineSeries(model, series, detailUnit)),
   }
+}
+
+function chartGrid(
+  forExport: boolean,
+  legend: ReturnType<typeof calculateLegendBox>,
+  showTopUnit: boolean,
+  unitFontSize: number,
+) {
+  const grid = forExport
+    ? { top: Math.max(132, legend.top + legend.height + 32), right: 72, bottom: 90, left: 110, containLabel: true as const }
+    : { top: Math.max(104, legend.top + legend.height + 24), right: 36, bottom: 62, left: 72, containLabel: true as const }
+  if (showTopUnit) grid.top += Math.ceil(unitFontSize * 1.5) + (forExport ? 12 : 10)
+  return grid
+}
+
+function yAxisContentOffset(
+  model: ChartModel,
+  tickUnit: string,
+  measureText: TextMeasurer,
+) {
+  const tickValues = model.series.flatMap(series => series.values)
+    .filter((value): value is number => value !== null)
+  return Math.ceil(Math.max(
+    0,
+    ...tickValues.map(value => measureText(formatValue(value, tickUnit), model.settings.yAxisTickLabelFontSize)),
+  )) + 8
 }
 
 function calculateLegendBox(
@@ -185,6 +241,22 @@ function calculateLegendBox(
   const availableWidth = Math.max(1, chartWidth - sideInset * 2)
   const availableTextWidth = Math.max(1, availableWidth - itemWidth - markerTextGap)
   const formattedNames = new Map<string, string>()
+
+  if (model.settings.legendLayout === 'horizontal') {
+    const itemWidths = model.series.map((series) => {
+      formattedNames.set(series.fieldName, series.fieldName)
+      return Math.ceil(itemWidth + markerTextGap + measureText(series.fieldName, fontSize))
+    })
+    return {
+      top,
+      width: Math.max(1, itemWidths.reduce((width, item) => width + item, 0)
+        + Math.max(0, itemWidths.length - 1) * itemGap),
+      height: itemWidths.length > 0 ? lineHeight : 0,
+      lineHeight,
+      formattedNames,
+    }
+  }
+
   const items = model.series.map((series) => {
     const lines = wrapLegendName(series.fieldName, availableTextWidth, fontSize, measureText)
     formattedNames.set(series.fieldName, lines.join('\n'))
@@ -194,40 +266,11 @@ function calculateLegendBox(
     }
   })
 
-  if (model.settings.legendLayout === 'vertical') {
-    return {
-      top,
-      width: Math.min(availableWidth, Math.max(1, ...items.map(item => item.width))),
-      height: items.reduce((height, item) => height + item.height, 0)
-        + Math.max(0, items.length - 1) * itemGap,
-      lineHeight,
-      formattedNames,
-    }
-  }
-
-  let rowWidth = 0
-  let rowHeight = 0
-  let totalHeight = 0
-  let widestRow = 0
-  for (const item of items) {
-    const nextWidth = rowWidth === 0 ? item.width : rowWidth + itemGap + item.width
-    if (rowWidth > 0 && nextWidth > availableWidth) {
-      widestRow = Math.max(widestRow, rowWidth)
-      totalHeight += rowHeight + itemGap
-      rowWidth = item.width
-      rowHeight = item.height
-    }
-    else {
-      rowWidth = nextWidth
-      rowHeight = Math.max(rowHeight, item.height)
-    }
-  }
-  widestRow = Math.max(widestRow, rowWidth)
-  totalHeight += rowHeight
   return {
     top,
-    width: Math.min(availableWidth, Math.max(1, widestRow)),
-    height: totalHeight,
+    width: Math.min(availableWidth, Math.max(1, ...items.map(item => item.width))),
+    height: items.reduce((height, item) => height + item.height, 0)
+      + Math.max(0, items.length - 1) * itemGap,
     lineHeight,
     formattedNames,
   }

@@ -54,12 +54,17 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
     store.updateLegendLayout('vertical')
     store.updateLegendPosition('right')
     store.updateCanvasColor('#f0f4f880')
+    store.updateYAxisUnit(' 万元 ')
+    store.updateYAxisUnitDisplayLocations(['detail', 'tick'])
+    expect(store.chartSettings.yAxisUnit).toBe('万元')
     store.selectWorksheet('orders')
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#344054')
     expect(store.chartSettings).toMatchObject({
       canvasColor: '#FFFFFF',
       legendLayout: 'horizontal',
       legendPosition: 'center',
+      yAxisUnit: '',
+      yAxisUnitDisplayLocations: ['top'],
     })
 
     store.updateDetailLabelColor(1, '#123456')
@@ -70,6 +75,14 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
       canvasColor: '#F0F4F880',
       legendLayout: 'vertical',
       legendPosition: 'right',
+      yAxisUnit: '万元',
+      yAxisUnitDisplayLocations: ['detail', 'tick'],
+    })
+
+    store.updateYAxisUnit('   ')
+    expect(store.chartSettings).toMatchObject({
+      yAxisUnit: '',
+      yAxisUnitDisplayLocations: ['detail', 'tick'],
     })
 
     await importDataSource(store, dataSource('replacement.csv', [
@@ -80,6 +93,8 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
       canvasColor: '#FFFFFF',
       legendLayout: 'horizontal',
       legendPosition: 'center',
+      yAxisUnit: '',
+      yAxisUnitDisplayLocations: ['top'],
     })
     store.$dispose()
   })
