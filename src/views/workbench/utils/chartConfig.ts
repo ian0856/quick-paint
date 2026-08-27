@@ -64,9 +64,10 @@ export function createChartOption(
   const forExport = options.forExport === true
   const metrics = legendMetrics(forExport)
   const measureText = options.measureText ?? canvasTextMeasurer()
+  const chartWidth = options.chartWidth ?? CHART_SURFACE_WIDTH
   const legend = calculateLegendBox(
     model,
-    options.chartWidth ?? CHART_SURFACE_WIDTH,
+    chartWidth,
     metrics,
     measureText,
   )
@@ -77,6 +78,12 @@ export function createChartOption(
   const topUnit = unit && unitLocations.has('top') ? `单位：${unit}` : ''
   const valueFormatter = (value: unknown) => formatValue(value, unit)
   const grid = chartGrid(forExport, legend, Boolean(topUnit), model.settings.yAxisTickLabelFontSize)
+  const xAxisLabels = calculateXAxisLabels(
+    model.labels,
+    chartWidth - grid.left - grid.right,
+    model.settings.xAxisTickLabelFontSize,
+    measureText,
+  )
 
   return {
     animation: false,
@@ -156,7 +163,7 @@ export function createChartOption(
       data: [...model.labels],
       name: model.settings.xAxisName.trim(),
       nameLocation: 'middle',
-      nameGap: forExport ? 54 : 42,
+      nameGap: (forExport ? 54 : 42) + (xAxisLabels.maxLineCount - 1) * xAxisLabels.lineHeight,
       nameTextStyle: {
         color: model.settings.xAxisNameColor,
         fontFamily: CHART_FONT,
@@ -169,8 +176,10 @@ export function createChartOption(
         color: model.settings.xAxisTickLabelColor,
         fontFamily: CHART_FONT,
         fontSize: model.settings.xAxisTickLabelFontSize,
-        hideOverlap: true,
-        interval: 'auto',
+        lineHeight: xAxisLabels.lineHeight,
+        hideOverlap: false,
+        interval: 0,
+        formatter: (value: string) => xAxisLabels.formatted.get(value) ?? value,
       },
     },
     yAxis: {
@@ -259,7 +268,7 @@ function calculateLegendBox(
   }
 
   const items = model.series.map((series) => {
-    const lines = wrapLegendName(series.fieldName, availableTextWidth, fontSize, measureText)
+    const lines = wrapText(series.fieldName, availableTextWidth, fontSize, measureText)
     formattedNames.set(series.fieldName, lines.join('\n'))
     return {
       width: Math.ceil(itemWidth + markerTextGap + Math.max(...lines.map(line => measureText(line, fontSize)))),
@@ -283,7 +292,28 @@ function legendMetrics(forExport: boolean) {
     : { top: 62, itemWidth: 14, itemHeight: 9, itemGap: 16, markerTextGap: 5, sideInset: 36 }
 }
 
-function wrapLegendName(
+function calculateXAxisLabels(
+  labels: readonly string[],
+  availableWidth: number,
+  fontSize: number,
+  measureText: TextMeasurer,
+) {
+  const categoryWidth = availableWidth / Math.max(1, labels.length)
+  const maxWidth = Math.max(1, categoryWidth - 8)
+  const lineHeight = Math.ceil(fontSize * 1.5)
+  const formatted = new Map<string, string>()
+  let maxLineCount = 1
+
+  for (const label of labels) {
+    const lines = wrapText(label, maxWidth, fontSize, measureText)
+    formatted.set(label, lines.join('\n'))
+    maxLineCount = Math.max(maxLineCount, lines.length)
+  }
+
+  return { formatted, lineHeight, maxLineCount }
+}
+
+function wrapText(
   value: string,
   maxWidth: number,
   fontSize: number,
@@ -292,6 +322,11 @@ function wrapLegendName(
   const lines: string[] = []
   let line = ''
   for (const character of value) {
+    if (character === '\n') {
+      lines.push(line)
+      line = ''
+      continue
+    }
     if (line && measureText(`${line}${character}`, fontSize) > maxWidth) {
       lines.push(line)
       line = character
