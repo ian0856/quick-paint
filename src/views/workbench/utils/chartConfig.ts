@@ -6,6 +6,7 @@ import {
   LegendComponent,
   TitleComponent,
   TooltipComponent,
+  VisualMapContinuousComponent,
 } from 'echarts/components'
 import type {
   GraphicComponentOption,
@@ -13,6 +14,7 @@ import type {
   LegendComponentOption,
   TitleComponentOption,
   TooltipComponentOption,
+  VisualMapComponentOption,
 } from 'echarts/components'
 import { use } from 'echarts/core'
 import type { ComposeOption } from 'echarts/core'
@@ -35,6 +37,7 @@ export type ChartOption = ComposeOption<
   | LegendComponentOption
   | TitleComponentOption
   | TooltipComponentOption
+  | VisualMapComponentOption
 >
 
 type TextMeasurer = (value: string, fontSize: number) => number
@@ -53,6 +56,7 @@ use([
   LegendComponent,
   TitleComponent,
   TooltipComponent,
+  VisualMapContinuousComponent,
   LabelLayout,
   CanvasRenderer,
 ])
@@ -207,6 +211,7 @@ export function createChartOption(
         formatter: (value: number) => formatValue(value, tickUnit),
       },
     },
+    visualMap: createSeriesVisualMaps(model),
     series: model.series.map(series => model.settings.chartType === 'bar'
       ? createBarSeries(model, series, detailUnit)
       : createLineSeries(model, series, detailUnit)),
@@ -384,13 +389,13 @@ function createLineSeries(
   series: ChartModel['series'][number],
   unit: string,
 ): LineSeriesOption {
-  const seriesColor = series.seriesGradient
-    ? seriesGradient(series.color)
-    : series.color
+  const hasValueGradient = valueRange(series.values) !== null && series.seriesGradient
   return {
     type: 'line',
     name: series.fieldName,
-    data: [...series.values],
+    data: hasValueGradient
+      ? series.values.map(value => ({ value, visualMap: false }))
+      : [...series.values],
     connectNulls: false,
     showSymbol: true,
     showAllSymbol: true,
@@ -398,12 +403,21 @@ function createLineSeries(
     symbolSize: model.settings.showLinePoints ? 8 : 0,
     smooth: model.settings.lineStyle === 'smooth',
     smoothMonotone: 'x',
-    lineStyle: { color: seriesColor, width: 2 },
+    lineStyle: {
+      ...(!hasValueGradient ? { color: series.color } : {}),
+      width: 2,
+    },
     itemStyle: model.settings.hollowLinePoints
       ? { color: 'transparent', borderColor: series.color, borderWidth: 2 }
       : { color: series.color, borderWidth: 0 },
     ...(model.settings.areaFill
-      ? { areaStyle: { color: seriesColor, opacity: 0.15, origin: 'auto' as const } }
+      ? {
+          areaStyle: {
+            ...(!hasValueGradient ? { color: series.color } : {}),
+            opacity: 0.15,
+            origin: 'auto' as const,
+          },
+        }
       : {}),
     emphasis: { focus: 'series', scale: 1.25 },
     ...lineDetailLabel(model, series.detailLabelColor, unit),
@@ -458,19 +472,34 @@ function barBorderRadius(value: number | null, rounded: boolean): number | numbe
   return value > 0 ? [100, 100, 0, 0] : [0, 0, 100, 100]
 }
 
-function seriesGradient(baseColor: string) {
-  return {
-    type: 'linear' as const,
-    x: 0,
-    y: 0,
-    x2: 1,
-    y2: 0,
-    global: false,
-    colorStops: [
-      { offset: 0, color: deriveSeriesGradientStartColor(baseColor) },
-      { offset: 1, color: baseColor },
-    ],
-  }
+function createSeriesVisualMaps(model: ChartModel): VisualMapComponentOption[] {
+  if (model.settings.chartType !== 'line') return []
+
+  return model.series.flatMap((series, seriesIndex) => {
+    if (!series.seriesGradient) return []
+    const range = valueRange(series.values)
+    if (!range) return []
+
+    return [{
+      show: false,
+      type: 'continuous' as const,
+      seriesIndex,
+      dimension: 1,
+      min: range.min,
+      max: range.max,
+      inRange: {
+        color: [deriveSeriesGradientStartColor(series.color), series.color],
+      },
+    }]
+  })
+}
+
+function valueRange(values: readonly (number | null)[]) {
+  const numericValues = values.filter((value): value is number => value !== null)
+  if (numericValues.length === 0) return null
+  const min = Math.min(...numericValues)
+  const max = Math.max(...numericValues)
+  return min === max ? null : { min, max }
 }
 
 function numericValue(value: unknown) {

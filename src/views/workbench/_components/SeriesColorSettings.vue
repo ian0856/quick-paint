@@ -75,9 +75,9 @@ function updateColor(fieldId: FieldId, color: string | null) {
             :model-value="item.seriesGradient"
             :disabled="disabled"
             inline-prompt
-            active-text="渐"
-            inactive-text="渐"
-            :aria-label="`Series Gradient：${item.label}`"
+            active-text="值"
+            inactive-text="值"
+            :aria-label="`按数值渐变：${item.label}`"
             @change="emit('updateSeriesGradient', item.fieldId, $event as boolean)"
           />
         </div>
