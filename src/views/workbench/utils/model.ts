@@ -80,6 +80,8 @@ export type ChartSettings = {
   showYAxisSplitLines: boolean
   showLinePoints: boolean
   hollowLinePoints: boolean
+  linePointRadius: number
+  linePointColor: string | null
   roundedBars: boolean
   showBarBackground: boolean
   showDetailLabels: boolean

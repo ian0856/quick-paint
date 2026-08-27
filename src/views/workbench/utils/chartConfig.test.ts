@@ -41,7 +41,7 @@ describe('createChartOption Bar Chart behavior', () => {
       data: ['华东', '华南'],
       name: '地区',
       nameTextStyle: { color: '#778899', fontSize: 16 },
-      axisLabel: { color: '#112233', fontSize: 14 },
+      axisLabel: { color: '#112233', fontSize: 14, hideOverlap: false, interval: 0 },
     })
     expect(option.yAxis).toMatchObject({
       name: '金额',
@@ -78,6 +78,33 @@ describe('createChartOption Bar Chart behavior', () => {
       label: { show: true, position: 'top', color: '#654321', fontSize: 14 },
       labelLayout: { hideOverlap: true },
     })
+  })
+
+  test('wraps every long X Axis label without changing its source value or hiding overlaps', () => {
+    const model = barModel()
+    model.labels = ['春节前备货带动年末销售', '渠道库存恢复正常', '春季新品上市']
+    model.settings = { ...model.settings, xAxisName: '活动', xAxisTickLabelFontSize: 10 }
+
+    const option = createChartOption(model, {
+      chartWidth: 240,
+      measureText: value => Array.from(value).length * 10,
+    })
+    const xAxis = option.xAxis as {
+      data: string[]
+      nameGap: number
+      axisLabel: {
+        formatter: (value: string) => string
+        hideOverlap: boolean
+        interval: number
+        lineHeight: number
+      }
+    }
+
+    expect(xAxis.data).toEqual(model.labels)
+    expect(xAxis.axisLabel.formatter(model.labels[0]!)).toBe('春节前\n备货带\n动年末\n销售')
+    expect(xAxis.axisLabel.formatter(model.labels[1]!)).toBe('渠道库\n存恢复\n正常')
+    expect(xAxis.axisLabel).toMatchObject({ hideOverlap: false, interval: 0, lineHeight: 15 })
+    expect(xAxis.nameGap).toBe(87)
   })
 
   test.each([
@@ -248,6 +275,8 @@ describe('createChartOption Bar Chart behavior', () => {
     const chartImageSeries = chartImage.series as Array<Record<string, unknown>>
     const previewTitle = preview.title as { textStyle: unknown }
     const previewLegend = preview.legend as { textStyle: unknown }
+    const previewXAxis = preview.xAxis as Record<string, unknown>
+    const chartImageXAxis = chartImage.xAxis as Record<string, unknown>
     const previewYAxis = preview.yAxis as Record<string, unknown>
     const chartImageYAxis = chartImage.yAxis as Record<string, unknown>
 
@@ -263,8 +292,8 @@ describe('createChartOption Bar Chart behavior', () => {
     expect(chartImage.xAxis).toMatchObject({
       data: model.labels,
       name: '地区',
-      nameTextStyle: (preview.xAxis as Record<string, unknown>).nameTextStyle,
-      axisLabel: (preview.xAxis as Record<string, unknown>).axisLabel,
+      nameTextStyle: previewXAxis.nameTextStyle,
+      axisLabel: serializableOption(previewXAxis.axisLabel),
     })
     expect(chartImage.yAxis).toMatchObject({
       name: '金额',
@@ -273,6 +302,9 @@ describe('createChartOption Bar Chart behavior', () => {
     })
     const previewAxisFormatter = (previewYAxis.axisLabel as { formatter: (value: number) => string }).formatter
     const chartImageAxisFormatter = (chartImageYAxis.axisLabel as { formatter: (value: number) => string }).formatter
+    const previewXAxisFormatter = (previewXAxis.axisLabel as { formatter: (value: string) => string }).formatter
+    const chartImageXAxisFormatter = (chartImageXAxis.axisLabel as { formatter: (value: string) => string }).formatter
+    expect(chartImageXAxisFormatter(model.labels[0]!)).toBe(previewXAxisFormatter(model.labels[0]!))
     expect(chartImageAxisFormatter(86)).toBe(previewAxisFormatter(86))
   })
 
@@ -443,9 +475,9 @@ describe('createChartOption Line Chart behavior', () => {
 
   test.each([
     [true, false, 8, { color: '#D97706', borderWidth: 0 }],
-    [true, true, 8, { color: 'transparent', borderColor: '#D97706', borderWidth: 2 }],
+    [true, true, 8, { color: '#FFFFFF', borderColor: '#D97706', borderWidth: 2 }],
     [false, false, 0, { color: '#D97706', borderWidth: 0 }],
-    [false, true, 0, { color: 'transparent', borderColor: '#D97706', borderWidth: 2 }],
+    [false, true, 0, { color: '#FFFFFF', borderColor: '#D97706', borderWidth: 2 }],
   ] as const)('maps Point visibility %s and hollow state %s independently', (
     showLinePoints,
     hollowLinePoints,
@@ -463,28 +495,57 @@ describe('createChartOption Line Chart behavior', () => {
     })
   })
 
-  test('applies a per-Series left-to-right gradient to Line and Area while keeping Points and legend in the base color', () => {
+  test('uses the Canvas color as the hollow Point background', () => {
+    const model = lineModel('straight')
+    model.settings = {
+      ...model.settings,
+      canvasColor: '#F0F4F880',
+      hollowLinePoints: true,
+      linePointRadius: 6,
+      linePointColor: '#8B1E3F',
+    }
+
+    expect((createChartOption(model).series as unknown[])?.[0]).toMatchObject({
+      symbolSize: 12,
+      itemStyle: {
+        color: '#F0F4F880',
+        borderColor: '#8B1E3F',
+        borderWidth: 2,
+      },
+    })
+  })
+
+  test('uses the configured Point radius and solid color for every Series', () => {
+    const model = lineModel('straight')
+    model.settings = {
+      ...model.settings,
+      linePointRadius: 7,
+      linePointColor: '#8B1E3F',
+    }
+
+    expect(createChartOption(model).series).toMatchObject([
+      { symbolSize: 14, itemStyle: { color: '#8B1E3F', borderWidth: 0 } },
+      { symbolSize: 14, itemStyle: { color: '#8B1E3F', borderWidth: 0 } },
+    ])
+  })
+
+  test('maps each enabled Series relative value range to Line and Area color while keeping Points and legend in the base color', () => {
     const model = lineModel('straight', true)
     model.series[0]!.seriesGradient = true
     const option = createChartOption(model)
-    const gradient = {
-      type: 'linear',
-      x: 0,
-      y: 0,
-      x2: 1,
-      y2: 0,
-      global: false,
-      colorStops: [
-        { offset: 0, color: '#F2CFA8' },
-        { offset: 1, color: '#D97706' },
-      ],
-    }
 
     expect((option.series as unknown[])?.[0]).toMatchObject({
-      lineStyle: { color: gradient },
-      areaStyle: { color: gradient },
+      data: [
+        { value: 10, visualMap: false },
+        { value: null, visualMap: false },
+        { value: 30, visualMap: false },
+      ],
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.15 },
       itemStyle: { color: '#D97706' },
     })
+    expect((option.series as Array<Record<string, unknown>>)[0]!.lineStyle).not.toHaveProperty('color')
+    expect((option.series as Array<Record<string, unknown>>)[0]!.areaStyle).not.toHaveProperty('color')
     expect((option.series as unknown[])?.[1]).toMatchObject({
       lineStyle: { color: '#2563EB' },
       areaStyle: { color: '#2563EB' },
@@ -495,6 +556,51 @@ describe('createChartOption Line Chart behavior', () => {
         { name: '销售额', itemStyle: { color: '#2563EB' } },
       ],
     })
+    expect(option.visualMap).toEqual([{
+      show: false,
+      type: 'continuous',
+      seriesIndex: 0,
+      dimension: 1,
+      min: 10,
+      max: 30,
+      inRange: { color: ['#F2CFA8', '#D97706'] },
+    }])
+  })
+
+  test('falls back to the base color when an enabled value gradient has no range', () => {
+    const model = lineModel('straight', true)
+    model.series[0]!.seriesGradient = true
+    model.series[0]!.values = [10, null, 10]
+
+    const option = createChartOption(model)
+
+    expect((option.series as unknown[])?.[0]).toMatchObject({
+      data: [10, null, 10],
+      lineStyle: { color: '#D97706' },
+      areaStyle: { color: '#D97706' },
+    })
+    expect(option.visualMap).toEqual([])
+  })
+
+  test('creates an independent value domain for every enabled Series', () => {
+    const model = lineModel('straight')
+    model.series[0]!.seriesGradient = true
+    model.series[1]!.seriesGradient = true
+
+    expect(createChartOption(model).visualMap).toEqual([
+      expect.objectContaining({
+        seriesIndex: 0,
+        min: 10,
+        max: 30,
+        inRange: { color: ['#F2CFA8', '#D97706'] },
+      }),
+      expect.objectContaining({
+        seriesIndex: 1,
+        min: 20,
+        max: 28,
+        inRange: { color: ['#B3C8F8', '#2563EB'] },
+      }),
+    ])
   })
 
   test('formats and hides overlapping Detail Labels above every available Point', () => {

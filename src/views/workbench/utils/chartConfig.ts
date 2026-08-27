@@ -390,6 +390,7 @@ function createLineSeries(
   unit: string,
 ): LineSeriesOption {
   const hasValueGradient = valueRange(series.values) !== null && series.seriesGradient
+  const pointColor = model.settings.linePointColor ?? series.color
   return {
     type: 'line',
     name: series.fieldName,
@@ -400,7 +401,7 @@ function createLineSeries(
     showSymbol: true,
     showAllSymbol: true,
     symbol: 'circle',
-    symbolSize: model.settings.showLinePoints ? 8 : 0,
+    symbolSize: model.settings.showLinePoints ? model.settings.linePointRadius * 2 : 0,
     smooth: model.settings.lineStyle === 'smooth',
     smoothMonotone: 'x',
     lineStyle: {
@@ -408,8 +409,8 @@ function createLineSeries(
       width: 2,
     },
     itemStyle: model.settings.hollowLinePoints
-      ? { color: model.settings.canvasColor, borderColor: series.color, borderWidth: 2 }
-      : { color: series.color, borderWidth: 0 },
+      ? { color: model.settings.canvasColor, borderColor: pointColor, borderWidth: 2 }
+      : { color: pointColor, borderWidth: 0 },
     ...(model.settings.areaFill
       ? {
           areaStyle: {

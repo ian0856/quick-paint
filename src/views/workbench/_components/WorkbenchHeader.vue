@@ -32,16 +32,9 @@ function openSettings(event: MouseEvent) {
 
 <template>
   <header class="h-15 min-w-0 flex flex-none items-center justify-between gap-2 border-b border-base bg-base px-3 sm:gap-3 sm:px-5" aria-label="工作台操作">
-    <ElTooltip content="复位面板" placement="bottom">
-      <ElButton
-        circle
-        aria-label="复位面板"
-        :disabled="viewMode !== 'chart' || !chart"
-        @click="emit('resetViewport')"
-      >
-        <ElIcon><RefreshLeft /></ElIcon>
-      </ElButton>
-    </ElTooltip>
+    <ElButton aria-label="复位面板" :disabled="viewMode !== 'chart' || !chart" @click="emit('resetViewport')">
+      <ElIcon>复位</ElIcon>
+    </ElButton>
     <div class="min-w-0 flex items-center justify-end gap-1.5 sm:gap-3">
       <p v-if="exportSuccess" class="m-0 hidden text-xs text-success lg:block" role="status">PNG 已开始下载</p>
       <p v-if="exportError" class="m-0 hidden max-w-72 truncate text-xs text-danger lg:block" :title="exportError" role="alert">{{ exportError }}</p>

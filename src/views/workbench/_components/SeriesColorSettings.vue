@@ -37,16 +37,17 @@ function updateColor(fieldId: FieldId, color: string | null) {
       <ElRadio
         v-for="scheme in SERIES_COLOR_SCHEMES"
         :key="scheme.id"
-        class="scheme-option m-0! h-9! w-full! border border-base rounded-1 px-2.5!"
+        class="scheme-option m-0! h-9! w-full! rounded-1 px-2.5!"
         :value="scheme.id"
+        border
       >
         <span class="min-w-0 flex items-center gap-2">
           <span class="w-13 flex flex-none text-xs">{{ scheme.label }}</span>
-          <span class="flex items-center gap-1" aria-hidden="true">
+          <span class="flex items-center pl-1" aria-hidden="true">
             <span
               v-for="color in scheme.colors"
               :key="color"
-              class="h-3 w-3 rounded-sm border border-black/8"
+              class="-ml-1.5 h-7 w-7 rounded-full border-2 border-surface border-solid first:ml-0"
               :style="{ backgroundColor: color }"
             />
           </span>
@@ -91,5 +92,6 @@ function updateColor(fieldId: FieldId, color: string | null) {
   min-width: 0;
   flex: 1;
   padding-left: 8px;
+
 }
 </style>

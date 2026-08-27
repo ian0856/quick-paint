@@ -18,7 +18,9 @@ import {
   MAX_AXIS_UNIT_LENGTH,
   MAX_CHART_FONT_SIZE,
   MAX_CHART_TITLE_LENGTH,
+  MAX_LINE_POINT_RADIUS,
   MIN_CHART_FONT_SIZE,
+  MIN_LINE_POINT_RADIUS,
   normalizeCanvasColor,
   normalizeHexColor,
   parseFile,
@@ -332,6 +334,23 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     finishChartChange()
   }
 
+  function updateLinePointRadius(linePointRadius: number) {
+    if (
+      !Number.isInteger(linePointRadius)
+      || linePointRadius < MIN_LINE_POINT_RADIUS
+      || linePointRadius > MAX_LINE_POINT_RADIUS
+    ) return
+    chartSettings.value = { ...chartSettings.value, linePointRadius }
+    finishChartChange()
+  }
+
+  function updateLinePointColor(value: string | null) {
+    const linePointColor = value === null ? null : normalizeHexColor(value)
+    if (value !== null && !linePointColor) return
+    chartSettings.value = { ...chartSettings.value, linePointColor }
+    finishChartChange()
+  }
+
   function updateRoundedBars(roundedBars: boolean) {
     chartSettings.value = { ...chartSettings.value, roundedBars }
     finishChartChange()
@@ -642,6 +661,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     updateShowYAxisSplitLines,
     updateShowLinePoints,
     updateHollowLinePoints,
+    updateLinePointRadius,
+    updateLinePointColor,
     updateRoundedBars,
     updateShowBarBackground,
     updateShowDetailLabels,

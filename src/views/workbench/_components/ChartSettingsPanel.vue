@@ -156,9 +156,13 @@ const diagnostic = computed(() => {
               <LinePointSettings
                 :show-points="chartSettings.showLinePoints"
                 :hollow-points="chartSettings.hollowLinePoints"
+                :point-radius="chartSettings.linePointRadius"
+                :point-color="chartSettings.linePointColor"
                 :disabled="chartSettingsDisabled"
                 @update-show-points="store.updateShowLinePoints"
                 @update-hollow-points="store.updateHollowLinePoints"
+                @update-point-radius="store.updateLinePointRadius"
+                @update-point-color="store.updateLinePointColor"
               />
             </div>
             <div v-else class="border-t border-base py-5">

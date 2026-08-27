@@ -54,6 +54,8 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
     store.updateLegendLayout('vertical')
     store.updateLegendPosition('right')
     store.updateCanvasColor('#f0f4f880')
+    store.updateLinePointRadius(7)
+    store.updateLinePointColor('#8b1e3f')
     store.updateYAxisUnit(' 万元 ')
     store.updateYAxisUnitDisplayLocations(['detail', 'tick'])
     expect(store.chartSettings.yAxisUnit).toBe('万元')
@@ -61,6 +63,8 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#344054')
     expect(store.chartSettings).toMatchObject({
       canvasColor: '#FFFFFF',
+      linePointRadius: 4,
+      linePointColor: null,
       legendLayout: 'horizontal',
       legendPosition: 'center',
       yAxisUnit: '',
@@ -73,6 +77,8 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#8B1E3F')
     expect(store.chartSettings).toMatchObject({
       canvasColor: '#F0F4F880',
+      linePointRadius: 7,
+      linePointColor: '#8B1E3F',
       legendLayout: 'vertical',
       legendPosition: 'right',
       yAxisUnit: '万元',
@@ -91,11 +97,34 @@ describe('workbench Worksheet-scoped Chart Settings', () => {
     expect(store.yAxisFields[0]?.detailLabelColor).toBe('#344054')
     expect(store.chartSettings).toMatchObject({
       canvasColor: '#FFFFFF',
+      linePointRadius: 4,
+      linePointColor: null,
       legendLayout: 'horizontal',
       legendPosition: 'center',
       yAxisUnit: '',
       yAxisUnitDisplayLocations: ['top'],
     })
+    store.$dispose()
+  })
+
+  test('rejects invalid Point radius and color settings and supports restoring Series colors', async () => {
+    const store = useWorkbenchStore()
+    await importDataSource(store, dataSource('first.csv', [
+      worksheet('sales', '销售', ['地区', '销售额']),
+    ]))
+
+    store.updateLinePointRadius(0)
+    store.updateLinePointRadius(21)
+    store.updateLinePointRadius(4.5)
+    store.updateLinePointColor('#xyzxyz')
+    expect(store.chartSettings).toMatchObject({ linePointRadius: 4, linePointColor: null })
+
+    store.updateLinePointRadius(10)
+    store.updateLinePointColor('#123456')
+    expect(store.chartSettings).toMatchObject({ linePointRadius: 10, linePointColor: '#123456' })
+
+    store.updateLinePointColor(null)
+    expect(store.chartSettings.linePointColor).toBeNull()
     store.$dispose()
   })
 })

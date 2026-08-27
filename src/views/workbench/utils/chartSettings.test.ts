@@ -17,6 +17,8 @@ describe('chart settings', () => {
       showYAxisSplitLines: true,
       showLinePoints: true,
       hollowLinePoints: false,
+      linePointRadius: 4,
+      linePointColor: null,
       roundedBars: false,
       showBarBackground: false,
       showDetailLabels: false,

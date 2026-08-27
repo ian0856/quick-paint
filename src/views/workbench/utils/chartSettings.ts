@@ -33,6 +33,9 @@ export const MAX_AXIS_UNIT_LENGTH = 20
 export const MAX_CHART_TITLE_LENGTH = 120
 export const MIN_CHART_FONT_SIZE = 8
 export const MAX_CHART_FONT_SIZE = 32
+export const MIN_LINE_POINT_RADIUS = 1
+export const MAX_LINE_POINT_RADIUS = 20
+export const DEFAULT_LINE_POINT_RADIUS = 4
 export const DEFAULT_CHART_TITLE_FONT_SIZE = 18
 export const DEFAULT_CHART_TITLE_COLOR = '#172033'
 export const DEFAULT_CANVAS_COLOR = '#FFFFFF'
@@ -52,6 +55,8 @@ export function createDefaultChartSettings(): ChartSettings {
     showYAxisSplitLines: true,
     showLinePoints: true,
     hollowLinePoints: false,
+    linePointRadius: DEFAULT_LINE_POINT_RADIUS,
+    linePointColor: null,
     roundedBars: false,
     showBarBackground: false,
     showDetailLabels: false,

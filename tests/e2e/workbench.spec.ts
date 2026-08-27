@@ -431,7 +431,7 @@ async function canvasColorXRuns(
   }, { color, y })
 }
 
-async function blueGradientStats(canvas: ReturnType<Page['locator']>) {
+async function blueValueGradientStats(canvas: ReturnType<Page['locator']>) {
   return canvas.evaluate((element) => {
     const context = (element as HTMLCanvasElement).getContext('2d')!
     const { width, height } = context.canvas
@@ -446,16 +446,16 @@ async function blueGradientStats(canvas: ReturnType<Page['locator']>) {
         const blue = pixels[index + 2]!
         if (red === 37 && green === 99 && blue === 235) baseColorPixels += 1
         if (blue > 180 && blue > red + 50 && blue > green + 30) {
-          samples[x < width * 0.52 ? 0 : 1].push(red)
+          samples[y < height * 0.52 ? 0 : 1].push(red)
         }
       }
     }
     const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length
     return {
-      leftPixels: samples[0].length,
-      rightPixels: samples[1].length,
-      leftAverageRed: average(samples[0]),
-      rightAverageRed: average(samples[1]),
+      highValuePixels: samples[0].length,
+      lowValuePixels: samples[1].length,
+      highValueAverageRed: average(samples[0]),
+      lowValueAverageRed: average(samples[1]),
       baseColorPixels,
     }
   })
@@ -853,11 +853,16 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(areaSwitch).toBeChecked()
   const showPoints = settings.getByRole('switch', { name: '显示节点' })
   const hollowPoints = settings.getByRole('switch', { name: '节点镂空' })
-  const salesGradient = settings.getByRole('switch', { name: 'Series Gradient：销售额' })
+  const pointRadius = settings.getByRole('spinbutton', { name: '节点半径' })
+  const salesGradient = settings.getByRole('switch', { name: '按数值渐变：销售额' })
   await expect(showPoints).toBeChecked()
   await expect(hollowPoints).not.toBeChecked()
+  await expect(pointRadius).toHaveValue('4')
+  await pointRadius.press('ArrowUp')
+  await expect(pointRadius).toHaveValue('5')
+  await setChartColor(page, settings, '节点颜色', '#8B1E3F')
   await settings.locator('.el-switch:has(input[aria-label="节点镂空"]) .el-switch__core').click()
-  await settings.locator('.el-switch:has(input[aria-label="Series Gradient：销售额"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="按数值渐变：销售额"]) .el-switch__core').click()
   await settings.getByText('经典', { exact: true }).click()
   await settings.getByText('柔和', { exact: true }).click()
   await expect(hollowPoints).toBeChecked()
@@ -865,6 +870,8 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
   await expect(showPoints).not.toBeChecked()
   await expect(hollowPoints).toHaveCount(0)
+  await expect(pointRadius).toHaveCount(0)
+  await expect(settings.getByRole('button', { name: '节点颜色' })).toHaveCount(0)
   await expect(settings.getByRole('radio', { name: /柔和/ })).toBeChecked()
   await expect(page.getByRole('list', { name: 'y轴字段顺序' }).getByRole('listitem')).toHaveText(['销售额', '利润'])
 
@@ -917,9 +924,11 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示节点' })).not.toBeChecked()
   await expect(settings.getByRole('switch', { name: '节点镂空' })).toHaveCount(0)
-  await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '按数值渐变：销售额' })).toBeChecked()
   await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
   await expect(settings.getByRole('switch', { name: '节点镂空' })).toBeChecked()
+  await expect(settings.getByRole('spinbutton', { name: '节点半径' })).toHaveValue('5')
+  await expect(settings.getByRole('button', { name: '节点颜色' })).toHaveAttribute('aria-description', /#8B1E3F/i)
   await expect(page.getByRole('img', { name: '折线图：销售报表，共 2 条数据，2 个数值系列' })).toBeVisible()
   await settings.getByText('柱状图', { exact: true }).click()
   await expect(settings.getByRole('radio', { name: '柱状图' })).toBeChecked()
@@ -930,7 +939,7 @@ test('configures the chart and restores Chart Settings per worksheet', async ({ 
   await settings.locator('.el-switch:has(input[aria-label="显示数据详情"]) .el-switch__core').click()
   await settings.getByText('折线图', { exact: true }).click()
   await expect(settings.getByRole('switch', { name: '显示线下半透明面积' })).toBeChecked()
-  await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '按数值渐变：销售额' })).toBeChecked()
   await expect(settings.getByRole('button', { name: /恢复默认/ })).toHaveCount(0)
   await settings.getByText('横向', { exact: true }).click()
   await settings.getByText('居中', { exact: true }).click()
@@ -1001,7 +1010,7 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await settings.locator('.el-switch:has(input[aria-label="显示 Y 轴分割线"]) .el-switch__core').click()
   await selectSettingsGroup(settings, '图形')
   await settings.locator('.el-switch:has(input[aria-label="节点镂空"]) .el-switch__core').click()
-  await settings.locator('.el-switch:has(input[aria-label="Series Gradient：销售额"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="按数值渐变：销售额"]) .el-switch__core').click()
   const sparseLineSurface = page.getByRole('img', { name: '折线图：Sheet1，共 3 条数据，2 个数值系列' })
   await expect(sparseLineSurface).toBeVisible()
   const sparseCanvas = page.locator('.chart-panel canvas')
@@ -1044,7 +1053,7 @@ test('keeps Line Chart settings through invalid mapping recovery and resets them
   await expect(settings.getByRole('radio', { name: '直线' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '显示节点' })).toBeChecked()
   await expect(settings.getByRole('switch', { name: '节点镂空' })).not.toBeChecked()
-  await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).not.toBeChecked()
+  await expect(settings.getByRole('switch', { name: '按数值渐变：销售额' })).not.toBeChecked()
   const singlePointPixels = await canvasColorStats(
     page.locator('.chart-panel canvas'),
     [37, 99, 235],
@@ -1093,14 +1102,14 @@ test('configures advanced Line and Bar appearance while preserving dependent val
   await settings.getByText('折线图', { exact: true }).click()
   const showPoints = settings.getByRole('switch', { name: '显示节点' })
   const hollowPoints = settings.getByRole('switch', { name: '节点镂空' })
-  const salesGradient = settings.getByRole('switch', { name: 'Series Gradient：销售额' })
+  const salesGradient = settings.getByRole('switch', { name: '按数值渐变：销售额' })
   await expect(showPoints).toBeChecked()
   await expect(hollowPoints).not.toBeChecked()
   await expect(salesGradient).not.toBeChecked()
   await expect(insideLabels).toHaveCount(0)
 
   await settings.locator('.el-switch:has(input[aria-label="节点镂空"]) .el-switch__core').click()
-  await settings.locator('.el-switch:has(input[aria-label="Series Gradient：销售额"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="按数值渐变：销售额"]) .el-switch__core').click()
   await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
   await expect(hollowPoints).toHaveCount(0)
   await settings.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
@@ -1110,7 +1119,7 @@ test('configures advanced Line and Bar appearance while preserving dependent val
   await page.locator('label[for="y-axis-fields"] + .el-select').click()
   await page.getByRole('option', { name: '销售额' }).click()
   await page.keyboard.press('Escape')
-  await expect(settings.getByRole('switch', { name: 'Series Gradient：销售额' })).toBeChecked()
+  await expect(settings.getByRole('switch', { name: '按数值渐变：销售额' })).toBeChecked()
 
   await settings.getByText('柱状图', { exact: true }).click()
   await expect(roundedBars).toBeChecked()
@@ -1140,12 +1149,12 @@ test('renders gradients, mixed-sign caps, and size-aware inside labels in previe
   await settings.getByText('折线图', { exact: true }).click()
   await settings.locator('.el-switch:has(input[aria-label="显示线下半透明面积"]) .el-switch__core').click()
   const solidFingerprint = await canvasFingerprint(canvas)
-  await settings.locator('.el-switch:has(input[aria-label="Series Gradient：销售额"]) .el-switch__core').click()
+  await settings.locator('.el-switch:has(input[aria-label="按数值渐变：销售额"]) .el-switch__core').click()
   await expect.poll(() => canvasFingerprint(canvas)).not.toBe(solidFingerprint)
-  const gradient = await blueGradientStats(canvas)
-  expect(gradient.leftPixels).toBeGreaterThan(20)
-  expect(gradient.rightPixels).toBeGreaterThan(20)
-  expect(gradient.leftAverageRed).toBeGreaterThan(gradient.rightAverageRed + 20)
+  const gradient = await blueValueGradientStats(canvas)
+  expect(gradient.highValuePixels).toBeGreaterThan(20)
+  expect(gradient.lowValuePixels).toBeGreaterThan(20)
+  expect(gradient.lowValueAverageRed).toBeGreaterThan(gradient.highValueAverageRed + 20)
   expect(gradient.baseColorPixels).toBeGreaterThan(5)
 
   await settings.getByText('柱状图', { exact: true }).click()
@@ -1283,7 +1292,7 @@ test('opens responsive Chart Settings as a focus-restoring drawer', async ({ pag
   await expect(drawer.getByRole('radiogroup', { name: '折线样式' })).toBeVisible()
   await expect(drawer.getByRole('switch', { name: '显示节点' })).toBeChecked()
   await expect(drawer.getByRole('switch', { name: '节点镂空' })).not.toBeChecked()
-  await expect(drawer.getByRole('switch', { name: /Series Gradient：/ }).first()).not.toBeChecked()
+  await expect(drawer.getByRole('switch', { name: /按数值渐变：/ }).first()).not.toBeChecked()
   await drawer.locator('.el-switch:has(input[aria-label="显示节点"]) .el-switch__core').click()
   await expect(drawer.getByRole('switch', { name: '节点镂空' })).toHaveCount(0)
   await selectSettingsGroup(drawer, 'x轴')
