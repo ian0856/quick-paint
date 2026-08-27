@@ -408,7 +408,7 @@ function createLineSeries(
       width: 2,
     },
     itemStyle: model.settings.hollowLinePoints
-      ? { color: 'transparent', borderColor: series.color, borderWidth: 2 }
+      ? { color: model.settings.canvasColor, borderColor: series.color, borderWidth: 2 }
       : { color: series.color, borderWidth: 0 },
     ...(model.settings.areaFill
       ? {
