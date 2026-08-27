@@ -40,9 +40,10 @@ onBeforeUnmount(() => wideViewport?.removeEventListener('change', closeDrawerOnW
 
 <template>
   <div class="h-screen min-h-0 min-w-0 w-full flex flex-col overflow-hidden sm:flex-row">
-    <WorkbenchSidebar />
+    <WorkbenchSidebar class="workbench-sidebar-elevation" />
     <div class="min-h-0 min-w-0 flex flex-1 flex-col">
       <WorkbenchHeader
+        class="workbench-header-elevation"
         @reset-viewport="resetViewport"
         @open-settings="openSettings"
       />

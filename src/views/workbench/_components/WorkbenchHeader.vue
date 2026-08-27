@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Download, RefreshLeft, Setting } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElSegmented, ElTooltip } from 'element-plus'
+import { Download, Setting } from '@element-plus/icons-vue'
+import { ElButton, ElIcon, ElSegmented } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { useWorkbenchStore } from '../../../stores/workbench'
 import type { ViewMode } from '../utils'
@@ -33,7 +33,7 @@ function openSettings(event: MouseEvent) {
 <template>
   <header class="h-15 min-w-0 flex flex-none items-center justify-between gap-2 border-b border-base bg-base px-3 sm:gap-3 sm:px-5" aria-label="工作台操作">
     <ElButton aria-label="复位面板" :disabled="viewMode !== 'chart' || !chart" @click="emit('resetViewport')">
-      <ElIcon>复位</ElIcon>
+      图像复位
     </ElButton>
     <div class="min-w-0 flex items-center justify-end gap-1.5 sm:gap-3">
       <p v-if="exportSuccess" class="m-0 hidden text-xs text-success lg:block" role="status">PNG 已开始下载</p>

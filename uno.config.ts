@@ -29,6 +29,8 @@ export default defineConfig({
       'table-cell': 'h-full min-w-0 flex flex-none items-center overflow-hidden border-r border-border px-3 text-xs text-text whitespace-nowrap text-ellipsis select-text',
       'z-alert': 'z-10',
       'focus-ring': 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/38 focus-visible:ring-offset-2',
+      'workbench-sidebar-elevation': 'relative z-20 shadow-[6px_0_18px_-10px_rgba(23,32,51,0.22)]',
+      'workbench-header-elevation': 'relative z-10 shadow-[0_6px_18px_-10px_rgba(23,32,51,0.22)]',
     },
   ],
   presets: [presetWind3()],
