@@ -1,13 +1,16 @@
-## Agent skills
+# Quick Paint
 
-### Issue tracker
+Quick Paint turns a local `.xlsx` or UTF-8 `.csv` Data Source into a downloadable Bar Chart or Line Chart. Parsing and rendering stay in the browser; source data must not leave the user's session.
 
-Issues and specs are tracked in GitHub Issues using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+## Verification
 
-### Triage labels
+- Type-check: `npm run typecheck`
+- Unit tests: `npm test`
+- Browser workflow: `npm run test:e2e -- --project=chromium`
+- Production build: `npm run build`
 
-Triage uses the five default canonical label names. See `docs/agents/triage-labels.md`.
+## Task-specific context
 
-### Domain docs
-
-Domain documentation uses the single-context layout. See `docs/agents/domain.md`.
+- Domain behavior or terminology: read [`docs/agents/domain.md`](docs/agents/domain.md).
+- Tests or user-visible chart behavior: read [`docs/agents/testing.md`](docs/agents/testing.md).
+- GitHub issue, spec, or triage work: read [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
